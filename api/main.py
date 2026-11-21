@@ -3,6 +3,8 @@ import json
 import os
 from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, status
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from src.engine import HybridSearchEngine
 
@@ -14,7 +16,18 @@ app = FastAPI(
 
 # Global engine instance
 CORPUS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "corpus.json")
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
 engine = HybridSearchEngine(embedding_dim=32)
+
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+@app.get("/", include_in_schema=False)
+def serve_ui():
+    index_file = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return {"message": "Hybrid Search API active. Visit /docs for Swagger documentation."}
 
 @app.on_event("startup")
 def startup_event():
