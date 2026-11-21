@@ -40,6 +40,8 @@ def startup_event():
 class SearchQueryRequest(BaseModel):
     query: str = Field(..., example="How do approximate nearest neighbors work in vector search?")
     top_k: int = Field(default=5, ge=1, le=50)
+    mode: str = Field(default="hybrid", description="Retrieval mode: hybrid, dense, or sparse")
+    rrf_k: int = Field(default=60, ge=1, le=100, description="RRF smoothing constant k")
 
 class SearchResultItem(BaseModel):
     id: str
@@ -51,6 +53,7 @@ class SearchResultItem(BaseModel):
 
 class SearchResponse(BaseModel):
     query: str
+    mode: Optional[str] = "hybrid"
     total_candidates_retrieved: int
     results: List[SearchResultItem]
     latency_breakdown_ms: Dict[str, float]
@@ -76,14 +79,25 @@ def search_documents(request: SearchQueryRequest):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Vector search index is not yet initialized."
         )
-    return engine.search_hybrid(request.query, top_k=request.top_k)
+    return engine.search_hybrid(
+        request.query,
+        top_k=request.top_k,
+        mode=request.mode,
+        rrf_k=request.rrf_k
+    )
 
 @app.post("/api/v1/documents", status_code=status.HTTP_201_CREATED, tags=["Ingestion"])
 def add_document(doc: IngestDocumentRequest):
     new_doc = doc.dict()
     updated_corpus = engine.corpus + [new_doc]
     engine.build_index(updated_corpus)
-    return {"message": f"Document '{doc.id}' successfully indexed.", "total_documents": len(updated_corpus)}
+    # Persist updated corpus to disk
+    try:
+        with open(CORPUS_PATH, "w", encoding="utf-8") as f:
+            json.dump(updated_corpus, f, indent=2)
+    except Exception as e:
+        print(f"Warning: could not write corpus.json: {e}")
+    return {"message": f"Document '{doc.title}' successfully indexed.", "total_documents": len(updated_corpus)}
 
 @app.get("/api/v1/metrics", tags=["Benchmarks"])
 def get_retrieval_metrics():

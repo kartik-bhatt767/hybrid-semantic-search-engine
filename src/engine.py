@@ -44,22 +44,36 @@ class HybridSearchEngine:
         self,
         query: str,
         top_k: int = 5,
-        candidate_pool_size: int = 15
+        candidate_pool_size: int = 15,
+        mode: str = "hybrid",
+        rrf_k: int = 60
     ) -> Dict[str, Any]:
         start_time = time.perf_counter()
 
-        # Step 1: Parallel retrieval
-        t_dense_start = time.perf_counter()
-        dense_results = self.search_dense(query, top_k=candidate_pool_size)
-        t_dense = (time.perf_counter() - t_dense_start) * 1000.0
+        # Step 1: Parallel retrieval based on mode
+        t_dense = 0.0
+        t_sparse = 0.0
+        dense_results = []
+        sparse_results = []
 
-        t_sparse_start = time.perf_counter()
-        sparse_results = self.search_sparse(query, top_k=candidate_pool_size)
-        t_sparse = (time.perf_counter() - t_sparse_start) * 1000.0
+        if mode in ["hybrid", "dense"]:
+            t_dense_start = time.perf_counter()
+            dense_results = self.search_dense(query, top_k=candidate_pool_size)
+            t_dense = (time.perf_counter() - t_dense_start) * 1000.0
 
-        # Step 2: Reciprocal Rank Fusion
+        if mode in ["hybrid", "sparse"]:
+            t_sparse_start = time.perf_counter()
+            sparse_results = self.search_sparse(query, top_k=candidate_pool_size)
+            t_sparse = (time.perf_counter() - t_sparse_start) * 1000.0
+
+        # Step 2: Ranking / Fusion
         t_fusion_start = time.perf_counter()
-        fused_candidates = reciprocal_rank_fusion([dense_results, sparse_results], k=60)
+        if mode == "dense":
+            fused_candidates = [(idx, score) for idx, score in dense_results]
+        elif mode == "sparse":
+            fused_candidates = [(idx, score) for idx, score in sparse_results]
+        else:
+            fused_candidates = reciprocal_rank_fusion([dense_results, sparse_results], k=rrf_k)
         t_fusion = (time.perf_counter() - t_fusion_start) * 1000.0
 
         # Step 3: Cross-Encoder Re-Ranking
@@ -71,6 +85,7 @@ class HybridSearchEngine:
 
         return {
             "query": query,
+            "mode": mode,
             "total_candidates_retrieved": len(fused_candidates),
             "results": final_results,
             "latency_breakdown_ms": {

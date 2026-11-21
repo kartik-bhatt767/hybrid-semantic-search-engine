@@ -1,6 +1,7 @@
 # ⚡ Hybrid Semantic Search Engine: Two-Stage Neural & Lexical Information Retrieval
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![CI/CD Tests](https://github.com/kartik-bhatt767/hybrid-semantic-search-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/kartik-bhatt767/hybrid-semantic-search-engine/actions)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI%20Async-teal.svg)](https://fastapi.tiangolo.com/)
 [![IR Metrics](https://img.shields.io/badge/Metrics-NDCG%4010%20%7C%20MRR%4010-purple.svg)](https://en.wikipedia.org/wiki/Discounted_cumulative_gain)
 [![Docker](https://img.shields.io/badge/Deployment-Docker%20Container-blue.svg)](https://www.docker.com/)

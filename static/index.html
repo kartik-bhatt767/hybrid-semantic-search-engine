@@ -23,10 +23,8 @@
           },
           colors: {
             brand: {
-              50: '#f0f9ff',
               400: '#38bdf8',
               500: '#0ea5e9',
-              600: '#0284c7',
             }
           }
         }
@@ -39,16 +37,13 @@
       color: #f3f4f6;
     }
     .hero-glow {
-      background: radial-gradient(circle at 50% -10%, rgba(56, 189, 248, 0.18) 0%, rgba(129, 140, 248, 0.08) 35%, transparent 70%);
+      background: radial-gradient(circle at 50% -10%, rgba(56, 189, 248, 0.16) 0%, rgba(129, 140, 248, 0.08) 35%, transparent 70%);
     }
     .glass-card {
       background: rgba(17, 24, 39, 0.6);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .glass-card:hover {
-      border-color: rgba(56, 189, 248, 0.3);
     }
     .glass-search {
       background: rgba(15, 23, 42, 0.75);
@@ -76,11 +71,15 @@
         </div>
         <div class="flex items-center space-x-2">
           <span class="font-extrabold tracking-tight text-white text-lg">HYBRID</span>
-          <span class="text-xs font-mono uppercase bg-cyan-950 text-cyan-400 border border-cyan-800/50 px-2 py-0.5 rounded-full">v1.2 // FAANG Core</span>
+          <span class="text-xs font-mono uppercase bg-cyan-950 text-cyan-400 border border-cyan-800/50 px-2 py-0.5 rounded-full">v1.3 // FAANG Core</span>
         </div>
       </div>
 
-      <div class="flex items-center space-x-4">
+      <div class="flex items-center space-x-3">
+        <button id="openIngestModalBtn" class="flex items-center space-x-1.5 text-xs font-medium text-cyan-400 bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-800/60 px-3 py-1.5 rounded-xl transition">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Add Document</span>
+        </button>
         <div class="hidden sm:flex items-center space-x-2 text-xs font-mono text-gray-400 bg-gray-900/80 border border-gray-800 px-3 py-1.5 rounded-full">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>Engine Online • P95 <span class="text-cyan-400 font-bold">0.45ms</span></span>
@@ -93,23 +92,46 @@
   </header>
 
   <!-- Main Container -->
-  <main class="relative z-10 flex-1 max-w-4xl w-full mx-auto px-6 pt-12 pb-24">
+  <main class="relative z-10 flex-1 max-w-4xl w-full mx-auto px-6 pt-10 pb-20">
     
     <!-- Hero Title -->
-    <div class="text-center mb-8">
-      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium mb-4">
+    <div class="text-center mb-6">
+      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium mb-3">
         <span>Information Retrieval & RAG System</span>
       </div>
-      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-white mb-3">
+      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-white mb-2">
         Instant Semantic & Lexical Search
       </h1>
-      <p class="text-gray-400 text-base max-w-xl mx-auto leading-relaxed">
+      <p class="text-gray-400 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
         Multi-index retrieval combining continuous <span class="text-gray-200 font-medium">Dense Vectors</span> with <span class="text-gray-200 font-medium">Okapi BM25</span>, fused via <span class="text-cyan-400 font-medium">Reciprocal Rank Fusion</span>.
       </p>
     </div>
 
+    <!-- Search Controls & Mode Selector -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <!-- Mode Toggle -->
+      <div class="flex items-center space-x-1.5 bg-gray-950 border border-gray-800 p-1 rounded-xl text-xs font-mono">
+        <button id="modeHybrid" class="mode-tab px-3 py-1.5 rounded-lg bg-cyan-950 text-cyan-400 font-bold border border-cyan-800/60 transition" data-mode="hybrid">
+          ⚡ Hybrid (RRF)
+        </button>
+        <button id="modeDense" class="mode-tab px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition" data-mode="dense">
+          🧠 Dense Vector
+        </button>
+        <button id="modeSparse" class="mode-tab px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition" data-mode="sparse">
+          🔍 Sparse BM25
+        </button>
+      </div>
+
+      <!-- Advanced Params (RRF k) -->
+      <div class="flex items-center space-x-3 text-xs font-mono text-gray-400">
+        <span>RRF Constant (k):</span>
+        <span id="kVal" class="text-cyan-400 font-bold">60</span>
+        <input id="kSlider" type="range" min="20" max="100" value="60" step="10" class="w-24 accent-cyan-500 cursor-pointer">
+      </div>
+    </div>
+
     <!-- Search Box -->
-    <div class="mb-6">
+    <div class="mb-5">
       <div class="glass-search rounded-2xl p-2 flex items-center shadow-2xl">
         <div class="pl-4 pr-3 text-gray-400">
           <i data-lucide="search" class="w-5 h-5"></i>
@@ -134,8 +156,7 @@
     </div>
 
     <!-- Suggestion Pills -->
-    <div class="mb-10">
-      <p class="text-xs font-mono text-gray-500 uppercase tracking-wider mb-2.5 text-center">Suggested Evaluation Queries</p>
+    <div class="mb-8">
       <div class="flex flex-wrap items-center justify-center gap-2">
         <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="Mitigating hallucinations in LLMs via Hybrid RAG">
           ⚡ Mitigating LLM Hallucinations
@@ -152,8 +173,8 @@
       </div>
     </div>
 
-    <!-- Telemetry Cards (Hidden initially) -->
-    <div id="telemetryBar" class="hidden mb-8 grid grid-cols-2 sm:grid-cols-5 gap-3 animate-fade-in">
+    <!-- Telemetry Cards -->
+    <div id="telemetryBar" class="hidden mb-6 grid grid-cols-2 sm:grid-cols-5 gap-3 animate-fade-in">
       <div class="glass-card rounded-xl p-3.5 text-center border-l-2 border-l-cyan-400">
         <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider mb-0.5">Total E2E</div>
         <div id="latTotal" class="text-xl font-mono font-bold text-white">0.45 ms</div>
@@ -178,7 +199,6 @@
 
     <!-- Results Section -->
     <div id="resultsContainer" class="space-y-4">
-      <!-- Empty State -->
       <div id="emptyState" class="text-center py-16 border border-dashed border-gray-800 rounded-2xl bg-gray-950/20">
         <div class="w-12 h-12 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center mx-auto text-gray-500 mb-3">
           <i data-lucide="layers" class="w-5 h-5"></i>
@@ -187,7 +207,6 @@
         <p class="text-xs text-gray-600 mt-1">Queries are evaluated across dense vector embeddings & Okapi BM25 indices.</p>
       </div>
 
-      <!-- Loading Spinner -->
       <div id="loadingState" class="hidden text-center py-12">
         <div class="inline-flex items-center space-x-2 text-cyan-400 text-sm font-mono">
           <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
@@ -195,20 +214,61 @@
         </div>
       </div>
 
-      <!-- Result Cards Container -->
       <div id="cardsList" class="space-y-4"></div>
     </div>
 
   </main>
 
-  <!-- Footer -->
+  <!-- Modal: Ingest New Document -->
+  <div id="ingestModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+          <i data-lucide="file-plus" class="w-5 h-5 text-cyan-400"></i>
+          <span>Index New Document into Corpus</span>
+        </h3>
+        <button id="closeIngestModalBtn" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="ingestForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-mono text-gray-400 uppercase mb-1">Document Title</label>
+          <input id="docTitle" type="text" required placeholder="e.g. Distributed Consensus with Paxos" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-mono text-gray-400 uppercase mb-1">Category / Domain</label>
+          <input id="docCategory" type="text" required placeholder="e.g. Distributed Systems" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-mono text-gray-400 uppercase mb-1">Document Content</label>
+          <textarea id="docContent" rows="4" required placeholder="Paste the technical text or article content here..." class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-cyan-500"></textarea>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-2">
+          <button type="button" id="cancelIngestBtn" class="px-4 py-2 text-xs font-medium text-gray-400 hover:text-white transition">Cancel</button>
+          <button type="submit" id="submitIngestBtn" class="px-5 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-cyan-500/20">Index Document</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-gray-900 border border-cyan-500/50 text-cyan-400 px-4 py-3 rounded-xl shadow-2xl text-xs font-mono flex items-center space-x-2 hidden">
+    <i data-lucide="check-circle" class="w-4 h-4"></i>
+    <span id="toastMsg">Document successfully indexed!</span>
+  </div>
+
   <footer class="relative z-10 border-t border-gray-900 py-6 text-center text-xs text-gray-500">
     <p>Engineered for FAANG Placement Portfolio by <span class="text-gray-300 font-medium">Kartik Bhatt</span> (@kartik-bhatt767)</p>
   </footer>
 
   <script>
-    // Initialize Lucide Icons
     lucide.createIcons();
+
+    let currentMode = "hybrid";
+    let currentK = 60;
 
     const queryInput = document.getElementById('queryInput');
     const searchBtn = document.getElementById('searchBtn');
@@ -217,6 +277,31 @@
     const loadingState = document.getElementById('loadingState');
     const cardsList = document.getElementById('cardsList');
     const telemetryBar = document.getElementById('telemetryBar');
+    const kSlider = document.getElementById('kSlider');
+    const kVal = document.getElementById('kVal');
+
+    // Mode Toggle Tabs
+    const modeTabs = document.querySelectorAll('.mode-tab');
+    modeTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        modeTabs.forEach(t => {
+          t.className = 'mode-tab px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition';
+        });
+        tab.className = 'mode-tab px-3 py-1.5 rounded-lg bg-cyan-950 text-cyan-400 font-bold border border-cyan-800/60 transition';
+        currentMode = tab.getAttribute('data-mode');
+        if (queryInput.value.trim() !== '') {
+          performSearch(queryInput.value);
+        }
+      });
+    });
+
+    kSlider.addEventListener('input', (e) => {
+      currentK = parseInt(e.target.value);
+      kVal.textContent = currentK;
+      if (queryInput.value.trim() !== '' && currentMode === 'hybrid') {
+        performSearch(queryInput.value);
+      }
+    });
 
     // Query Chip Clicks
     document.querySelectorAll('.query-chip').forEach(chip => {
@@ -232,9 +317,7 @@
     });
 
     queryInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        performSearch(queryInput.value);
-      }
+      if (e.key === 'Enter') performSearch(queryInput.value);
     });
 
     clearBtn.addEventListener('click', () => {
@@ -243,9 +326,7 @@
       queryInput.focus();
     });
 
-    searchBtn.addEventListener('click', () => {
-      performSearch(queryInput.value);
-    });
+    searchBtn.addEventListener('click', () => performSearch(queryInput.value));
 
     async function performSearch(query) {
       if (!query || query.trim() === '') return;
@@ -258,12 +339,15 @@
         const response = await fetch('/api/v1/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: query.trim(), top_k: 5 })
+          body: JSON.stringify({
+            query: query.trim(),
+            top_k: 5,
+            mode: currentMode,
+            rrf_k: currentK
+          })
         });
 
-        if (!response.ok) {
-          throw new Error('Search request failed with status ' + response.status);
-        }
+        if (!response.ok) throw new Error('Search failed with status ' + response.status);
 
         const data = await response.json();
         renderResults(data);
@@ -282,7 +366,6 @@
     function renderResults(data) {
       loadingState.classList.add('hidden');
       
-      // Update Telemetry
       const l = data.latency_breakdown_ms;
       document.getElementById('latTotal').textContent = l.total_e2e.toFixed(2) + ' ms';
       document.getElementById('latDense').textContent = l.dense_retrieval.toFixed(2) + ' ms';
@@ -291,7 +374,6 @@
       document.getElementById('latRerank').textContent = l.cross_encoder_rerank.toFixed(2) + ' ms';
       telemetryBar.classList.remove('hidden');
 
-      // Render Cards
       cardsList.innerHTML = '';
       data.results.forEach((item, index) => {
         const card = document.createElement('div');
@@ -322,6 +404,48 @@
 
       lucide.createIcons();
     }
+
+    // Modal Ingestion Logic
+    const ingestModal = document.getElementById('ingestModal');
+    const openIngestModalBtn = document.getElementById('openIngestModalBtn');
+    const closeIngestModalBtn = document.getElementById('closeIngestModalBtn');
+    const cancelIngestBtn = document.getElementById('cancelIngestBtn');
+    const ingestForm = document.getElementById('ingestForm');
+    const toast = document.getElementById('toast');
+
+    function toggleModal(show) {
+      ingestModal.classList.toggle('hidden', !show);
+    }
+
+    openIngestModalBtn.addEventListener('click', () => toggleModal(true));
+    closeIngestModalBtn.addEventListener('click', () => toggleModal(false));
+    cancelIngestBtn.addEventListener('click', () => toggleModal(false));
+
+    ingestForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('docTitle').value.trim();
+      const category = document.getElementById('docCategory').value.trim();
+      const content = document.getElementById('docContent').value.trim();
+      const docId = 'doc_' + Date.now().toString().slice(-4);
+
+      try {
+        const res = await fetch('/api/v1/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: docId, title, category, content })
+        });
+        const result = await res.json();
+        toggleModal(false);
+        ingestForm.reset();
+        
+        // Show Toast
+        document.getElementById('toastMsg').textContent = `Indexed "${title}" (${result.total_documents} total docs)`;
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 4000);
+      } catch (err) {
+        alert('Failed to index document: ' + err.message);
+      }
+    });
   </script>
 </body>
 </html>
