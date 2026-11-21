@@ -71,7 +71,7 @@
         </div>
         <div class="flex items-center space-x-2">
           <span class="font-extrabold tracking-tight text-white text-lg">HYBRID</span>
-          <span class="text-xs font-mono uppercase bg-cyan-950 text-cyan-400 border border-cyan-800/50 px-2 py-0.5 rounded-full">v1.3 // FAANG Core</span>
+          <span class="text-xs font-mono uppercase bg-cyan-950 text-cyan-400 border border-cyan-800/50 px-2 py-0.5 rounded-full">v1.4 // FAANG Core</span>
         </div>
       </div>
 
@@ -109,7 +109,6 @@
 
     <!-- Search Controls & Mode Selector -->
     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <!-- Mode Toggle -->
       <div class="flex items-center space-x-1.5 bg-gray-950 border border-gray-800 p-1 rounded-xl text-xs font-mono">
         <button id="modeHybrid" class="mode-tab px-3 py-1.5 rounded-lg bg-cyan-950 text-cyan-400 font-bold border border-cyan-800/60 transition" data-mode="hybrid">
           ⚡ Hybrid (RRF)
@@ -122,7 +121,6 @@
         </button>
       </div>
 
-      <!-- Advanced Params (RRF k) -->
       <div class="flex items-center space-x-3 text-xs font-mono text-gray-400">
         <span>RRF Constant (k):</span>
         <span id="kVal" class="text-cyan-400 font-bold">60</span>
@@ -156,7 +154,7 @@
     </div>
 
     <!-- Suggestion Pills -->
-    <div class="mb-8">
+    <div class="mb-6">
       <div class="flex flex-wrap items-center justify-center gap-2">
         <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="Mitigating hallucinations in LLMs via Hybrid RAG">
           ⚡ Mitigating LLM Hallucinations
@@ -197,6 +195,25 @@
       </div>
     </div>
 
+    <!-- 2D Semantic Space Visualizer Panel -->
+    <div id="vectorMapPanel" class="hidden mb-6 glass-card rounded-2xl p-5 border border-gray-800">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="compass" class="w-4 h-4 text-cyan-400"></i>
+          <span class="text-sm font-bold text-white">2D Semantic Vector Space (PCA Projection)</span>
+        </div>
+        <span class="text-xs font-mono text-gray-400">Geometric Latent Topology</span>
+      </div>
+      <canvas id="vectorCanvas" width="800" height="240" class="w-full h-48 rounded-xl bg-gray-950 border border-gray-800/80"></canvas>
+      <div class="flex items-center justify-between mt-2.5 text-xs font-mono text-gray-500">
+        <div class="flex items-center space-x-4">
+          <span class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span><span class="text-gray-400">Corpus Documents</span></span>
+          <span class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span><span class="text-rose-400 font-bold">Query Location</span></span>
+        </div>
+        <span>Cosine inner product mapping</span>
+      </div>
+    </div>
+
     <!-- Results Section -->
     <div id="resultsContainer" class="space-y-4">
       <div id="emptyState" class="text-center py-16 border border-dashed border-gray-800 rounded-2xl bg-gray-950/20">
@@ -228,7 +245,7 @@
           <span>Index New Document into Corpus</span>
         </h3>
         <button id="closeIngestModalBtn" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800">
-          <i data-lucide="x" class="w-5 h-5"></i>
+          <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
@@ -277,6 +294,8 @@
     const loadingState = document.getElementById('loadingState');
     const cardsList = document.getElementById('cardsList');
     const telemetryBar = document.getElementById('telemetryBar');
+    const vectorMapPanel = document.getElementById('vectorMapPanel');
+    const vectorCanvas = document.getElementById('vectorCanvas');
     const kSlider = document.getElementById('kSlider');
     const kVal = document.getElementById('kVal');
 
@@ -328,6 +347,14 @@
 
     searchBtn.addEventListener('click', () => performSearch(queryInput.value));
 
+    function highlightTerms(text, query) {
+      if (!query) return text;
+      const terms = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      if (terms.length === 0) return text;
+      const regex = new RegExp(`(${terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+      return text.replace(regex, '<mark class="bg-cyan-500/20 text-cyan-300 font-semibold px-1 py-0.5 rounded">$1</mark>');
+    }
+
     async function performSearch(query) {
       if (!query || query.trim() === '') return;
 
@@ -351,6 +378,9 @@
 
         const data = await response.json();
         renderResults(data);
+
+        // Fetch 2D Vector Projection
+        fetchVectorMap(query.trim());
       } catch (err) {
         console.error(err);
         loadingState.classList.add('hidden');
@@ -391,7 +421,7 @@
             </span>
           </div>
           <p class="text-gray-300 text-sm leading-relaxed mb-4">
-            ${item.content}
+            ${highlightTerms(item.content, data.query)}
           </p>
           <div class="flex flex-wrap items-center gap-4 text-xs font-mono text-gray-500 border-t border-gray-800/80 pt-3">
             <span>DOC_ID: <span class="text-gray-300 font-semibold">${item.id}</span></span>
@@ -403,6 +433,74 @@
       });
 
       lucide.createIcons();
+    }
+
+    async function fetchVectorMap(query) {
+      try {
+        const res = await fetch(`/api/v1/vector-map?query=${encodeURIComponent(query)}`);
+        const mapData = await res.json();
+        drawVectorCanvas(mapData);
+        vectorMapPanel.classList.remove('hidden');
+      } catch (e) {
+        console.error('Vector map fetch error:', e);
+      }
+    }
+
+    function drawVectorCanvas(data) {
+      const ctx = vectorCanvas.getContext('2d');
+      const w = vectorCanvas.width;
+      const h = vectorCanvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Grid background
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h);
+      ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
+      ctx.stroke();
+
+      // Transform normalized [-1, 1] to canvas coordinates with margin
+      const margin = 30;
+      const toScreen = (x, y) => ({
+        cx: margin + ((x + 1) / 2) * (w - 2 * margin),
+        cy: margin + ((1 - y) / 2) * (h - 2 * margin)
+      });
+
+      // Plot documents
+      data.documents.forEach(doc => {
+        const { cx, cy } = toScreen(doc.x, doc.y);
+        ctx.beginPath();
+        ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fill();
+
+        ctx.font = '10px JetBrains Mono, monospace';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText(doc.id, cx + 8, cy + 3);
+      });
+
+      // Plot Query point
+      if (data.query) {
+        const { cx, cy } = toScreen(data.query.x, data.query.y);
+
+        // Sonar Radar Ring
+        ctx.beginPath();
+        ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(244, 63, 94, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#f43f5e';
+        ctx.fill();
+
+        ctx.font = 'bold 11px JetBrains Mono, monospace';
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillText('QUERY', cx + 10, cy + 4);
+      }
     }
 
     // Modal Ingestion Logic
@@ -438,7 +536,6 @@
         toggleModal(false);
         ingestForm.reset();
         
-        // Show Toast
         document.getElementById('toastMsg').textContent = `Indexed "${title}" (${result.total_documents} total docs)`;
         toast.classList.remove('hidden');
         setTimeout(() => toast.classList.add('hidden'), 4000);

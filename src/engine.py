@@ -97,6 +97,46 @@ class HybridSearchEngine:
             }
         }
 
+    def get_2d_projection(self, query: str = None) -> Dict[str, Any]:
+        """
+        Projects high-dimensional vector embeddings into 2D coordinates for real-time visualization.
+        """
+        from sklearn.decomposition import PCA
+        if self.dense_embeddings is None or len(self.dense_embeddings) < 2:
+            return {"documents": [], "query": None}
+
+        pca = PCA(n_components=2, random_state=42)
+        coords = pca.fit_transform(self.dense_embeddings)
+
+        x_min, x_max = coords[:, 0].min(), coords[:, 0].max()
+        y_min, y_max = coords[:, 1].min(), coords[:, 1].max()
+
+        norm_coords = []
+        for idx, (x, y) in enumerate(coords):
+            nx = ((x - x_min) / max(1e-6, (x_max - x_min))) * 2.0 - 1.0
+            ny = ((y - y_min) / max(1e-6, (y_max - y_min))) * 2.0 - 1.0
+            doc = self.corpus[idx]
+            norm_coords.append({
+                "id": doc["id"],
+                "title": doc["title"],
+                "category": doc["category"],
+                "x": round(float(nx), 3),
+                "y": round(float(ny), 3)
+            })
+
+        query_coord = None
+        if query and query.strip():
+            q_emb = self.dense.transform([query])
+            q_2d = pca.transform(q_emb)[0]
+            qx = ((q_2d[0] - x_min) / max(1e-6, (x_max - x_min))) * 2.0 - 1.0
+            qy = ((q_2d[1] - y_min) / max(1e-6, (y_max - y_min))) * 2.0 - 1.0
+            query_coord = {"x": round(float(qx), 3), "y": round(float(qy), 3)}
+
+        return {
+            "documents": norm_coords,
+            "query": query_coord
+        }
+
 if __name__ == "__main__":
     with open("data/corpus.json", "r") as f:
         docs = json.load(f)

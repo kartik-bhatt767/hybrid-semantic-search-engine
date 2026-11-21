@@ -96,17 +96,17 @@ pytest tests/ -v
 python benchmarks/run_benchmark.py
 ```
 
-### 4. Start Production API Server
+### 4. Start Production API Server & Interactive Web UI
 ```bash
 uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-Interactive Swagger API documentation available at: `http://localhost:8000/docs`
+- **Interactive Web UI**: Open `http://localhost:8000/` to explore the real-time search engine with 2D Vector Space Projection (PCA), live keyword highlighting, latency telemetry, and dynamic corpus ingestion.
+- **Interactive Swagger Docs**: Open `http://localhost:8000/docs` for OpenAPI specifications.
 
-### 5. Launch Interactive Streamlit Workbench
+### 5. Run with Docker Compose
 ```bash
-streamlit run streamlit_app.py
+docker compose up --build
 ```
-Explore real-time query latency breakdowns, hybrid ranking distributions, and pre-filled evaluation queries in your browser.
 
 ### Sample Query Request:
 ```bash
@@ -132,11 +132,12 @@ If a technical interviewer at **Google, Amazon, Meta, or Microsoft** asks about 
 
 ---
 
-## 💼 Resume Bullet Points (Copy-Paste Ready)
+## 💼 Resume Bullet Points (Copy-Paste Ready for Tier-1 / FAANG)
 
-- **Engineered a production-grade Two-Stage Hybrid Semantic Search Engine** in Python/FastAPI combining dense vector embeddings and Okapi BM25 via Reciprocal Rank Fusion (RRF), improving retrieval relevance by **+12.8% NDCG@10** over baseline vector search.
-- **Implemented a second-stage cross-encoder semantic re-ranker** with sub-2ms P95 query latency, containerized with multi-stage Docker builds and validated with automated PyTest CI suites.
-- **Benchmarked information retrieval metrics (MRR@10, NDCG@10, Latency percentiles)** across technical query distributions to eliminate vocabulary mismatch and semantic blindness.
+- **Engineered a production-grade Two-Stage Hybrid Semantic Search Engine** in Python/FastAPI combining dense vector embeddings with Okapi BM25 via Reciprocal Rank Fusion ($k=60$), lifting retrieval relevance by **+12.8% NDCG@10** over standalone dense vector search.
+- **Developed a responsive real-time web application (Tailwind CSS, HTML5 Canvas)** featuring dynamic 2D vector space visualization (PCA dimensionality reduction), live query term highlighting, sub-2ms telemetry breakdown, and instant document ingestion.
+- **Architected a second-stage cross-encoder semantic re-ranker** with sub-2ms P95 query latency, containerized with multi-stage Docker builds, and automated with GitHub Actions CI/CD test suites.
+- **Benchmarked information retrieval metrics (MRR@10, NDCG@10, P95/P99 latency)** across diverse technical query distributions to eliminate vocabulary mismatch and semantic blindness.
 
 ---
 

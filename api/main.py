@@ -99,6 +99,10 @@ def add_document(doc: IngestDocumentRequest):
         print(f"Warning: could not write corpus.json: {e}")
     return {"message": f"Document '{doc.title}' successfully indexed.", "total_documents": len(updated_corpus)}
 
+@app.get("/api/v1/vector-map", tags=["Visualization"])
+def get_vector_map(query: Optional[str] = None):
+    return engine.get_2d_projection(query=query)
+
 @app.get("/api/v1/metrics", tags=["Benchmarks"])
 def get_retrieval_metrics():
     return {
