@@ -101,6 +101,12 @@ uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 Interactive Swagger API documentation available at: `http://localhost:8000/docs`
 
+### 5. Launch Interactive Streamlit Workbench
+```bash
+streamlit run streamlit_app.py
+```
+Explore real-time query latency breakdowns, hybrid ranking distributions, and pre-filled evaluation queries in your browser.
+
 ### Sample Query Request:
 ```bash
 curl -X POST "http://localhost:8000/api/v1/search" \
