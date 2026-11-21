@@ -1,0 +1,62 @@
+[
+  {
+    "id": "doc_001",
+    "title": "Scaling Distributed Key-Value Stores with Raft Consensus",
+    "content": "Distributed key-value databases require strong consistency across replicas using consensus protocols like Raft and Paxos. Leader election, log replication, and heartbeat intervals ensure quorum and fault tolerance.",
+    "category": "Distributed Systems"
+  },
+  {
+    "id": "doc_002",
+    "title": "Attention Mechanisms and Transformer Architectures",
+    "content": "Transformers rely on multi-head scaled dot-product self-attention to capture long-range dependencies in natural language without sequential recurrent bottlenecks. Positional encodings provide sequence order.",
+    "category": "Deep Learning"
+  },
+  {
+    "id": "doc_003",
+    "title": "Approximate Nearest Neighbor Search with HNSW",
+    "content": "Hierarchical Navigable Small World (HNSW) graphs offer logarithmic search complexity for high-dimensional vector embeddings, outperforming inverted file indexes (IVF) in recall and query throughput latency.",
+    "category": "Vector Search"
+  },
+  {
+    "id": "doc_004",
+    "title": "Low-Latency Microservices with Async FastAPI and Pydantic",
+    "content": "Building high-throughput microservices requires asynchronous I/O event loops, efficient JSON serialization with Pydantic v2, connection pooling, and horizontal pod autoscaling in Kubernetes.",
+    "category": "System Design"
+  },
+  {
+    "id": "doc_005",
+    "title": "Mitigating Hallucinations in LLMs via Hybrid RAG Pipelines",
+    "content": "Retrieval-Augmented Generation (RAG) grounds Large Language Model responses in verified factual corpora. Combining dense neural vector retrieval with sparse BM25 keyword matching minimizes hallucination rates.",
+    "category": "AI / RAG"
+  },
+  {
+    "id": "doc_006",
+    "title": "Cross-Encoder Re-Ranking for Information Retrieval",
+    "content": "While bi-encoders generate independent query and passage embeddings for fast candidate retrieval, cross-encoders compute all-to-all cross-attention across concatenated pairs, yielding superior re-ranking accuracy.",
+    "category": "Information Retrieval"
+  },
+  {
+    "id": "doc_007",
+    "title": "LSM Trees vs B-Trees in Modern Storage Engines",
+    "content": "Log-Structured Merge (LSM) trees optimize write throughput by appending to an in-memory memtable and flushing SSTables to disk, whereas B-Trees provide predictable read latency with random in-place writes.",
+    "category": "Databases"
+  },
+  {
+    "id": "doc_008",
+    "title": "Gradient Descent Optimization with Adam and Cosine Annealing",
+    "content": "Adaptive moment estimation (AdamW) combines momentum and adaptive learning rates with decoupled weight decay. Cosine annealing schedules smoothly decrease the learning rate to escape saddle points.",
+    "category": "Deep Learning"
+  },
+  {
+    "id": "doc_009",
+    "title": "Container Orchestration and Service Mesh with Kubernetes and Envoy",
+    "content": "Kubernetes manages containerized workloads with declarative manifests, rolling updates, and ingress controllers. Envoy proxy provides sidecar service meshes with mTLS, distributed tracing, and circuit breakers.",
+    "category": "DevOps & Cloud"
+  },
+  {
+    "id": "doc_010",
+    "title": "Quantization and Pruning for Edge ML Inference",
+    "content": "Model compression techniques like INT8 Post-Training Quantization (PTQ) and structured pruning reduce memory bandwidth footprint and accelerate neural inference on constrained mobile GPUs and edge TPUs.",
+    "category": "Edge AI"
+  }
+]
