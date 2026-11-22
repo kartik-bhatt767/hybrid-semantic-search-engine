@@ -1,6 +1,6 @@
 # ⚡ Hybrid Semantic Search Engine: Two-Stage Neural & Lexical Information Retrieval
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-trycloudflare.com-success.svg)](https://wholesale-factors-burke-description.trycloudflare.com)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20Access-success.svg)](https://a4856e2ba4e3da.app.lhr.life)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![CI/CD Tests](https://github.com/kartik-bhatt767/hybrid-semantic-search-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/kartik-bhatt767/hybrid-semantic-search-engine/actions)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI%20Async-teal.svg)](https://fastapi.tiangolo.com/)
@@ -9,7 +9,7 @@
 [![Tests](https://img.shields.io/badge/Tests-PyTest%20Passing-brightgreen.svg)](https://docs.pytest.org/)
 [![Author](https://img.shields.io/badge/Author-kartik--bhatt767-orange.svg)](https://github.com/kartik-bhatt767)
 
-> **🌐 Public Live Demo Available**: [https://wholesale-factors-burke-description.trycloudflare.com](https://wholesale-factors-burke-description.trycloudflare.com)
+> **🌐 Public Live Demo (Open Automated & Browser Access)**: [https://a4856e2ba4e3da.app.lhr.life](https://a4856e2ba4e3da.app.lhr.life)
 > 
 > **High-Throughput, Low-Latency Hybrid Search Engine** combining **Dense Semantic Vector Retrieval** with **Okapi BM25 Lexical Matching** through **Reciprocal Rank Fusion (RRF)** and **Cross-Encoder Re-Ranking**. Built as a production-grade async microservice in FastAPI and containerized with Docker.
 
