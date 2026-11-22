@@ -194,7 +194,7 @@ engine = load_search_engine()
 # --- HERO SECTION ---
 st.markdown("""
 <div class="hero-container">
-    <div class="hero-pill">⚡ FAANG RETRIEVAL ENGINE • v1.2</div>
+    <div class="hero-pill">⚡ PRODUCTION RETRIEVAL ENGINE • v1.2</div>
     <div class="hero-title">Hybrid Semantic Search</div>
     <div class="hero-subtitle">
         Sub-millisecond multi-index information retrieval combining <b>Dense Neural Embeddings</b> + <b>Okapi BM25 Lexical Matching</b> fused via <b>Reciprocal Rank Fusion (RRF)</b>.

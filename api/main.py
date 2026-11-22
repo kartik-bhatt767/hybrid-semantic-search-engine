@@ -10,7 +10,7 @@ from src.engine import HybridSearchEngine
 
 app = FastAPI(
     title="⚡ Hybrid Semantic Search Engine API",
-    description="FAANG-grade Two-Stage Hybrid Information Retrieval Microservice combining Dense Vector & Okapi BM25 with Reciprocal Rank Fusion (RRF).",
+    description="High-Throughput Two-Stage Hybrid Information Retrieval Microservice combining Dense Vector & Okapi BM25 with Reciprocal Rank Fusion (RRF).",
     version="1.0.0"
 )
 

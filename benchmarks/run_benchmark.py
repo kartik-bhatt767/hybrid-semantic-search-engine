@@ -161,7 +161,7 @@ def _render_chart(summary):
         ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.04, f"{bar.get_height():.2f} ms",
                  ha="center", color="white", fontsize=9, fontweight="bold")
 
-    plt.suptitle("Hybrid Semantic Search — FAANG Benchmark Evaluation", color="white", fontsize=14, fontweight="bold", y=0.98)
+    plt.suptitle("Hybrid Semantic Search — Benchmark Evaluation", color="white", fontsize=14, fontweight="bold", y=0.98)
     plt.tight_layout()
 
     out_path = os.path.join(os.path.dirname(__file__), "..", "assets", "benchmark_comparison.png")

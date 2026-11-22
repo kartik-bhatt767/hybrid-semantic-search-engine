@@ -26,7 +26,7 @@ Modern Information Retrieval (IR) and Retrieval-Augmented Generation (RAG) face 
 2. **Semantic Blindness & Acronym Decay (Pure Dense / Vector Embeddings)**:
    Vector embeddings struggle with exact alphanumeric tokens, part numbers, short acronyms, or rare terms (e.g. *"HNSW"*, *"CVE-2024-1234"*), where cosine distance disperses sparse keyword matches.
 
-### The FAANG Solution: Two-Stage Hybrid Search
+### The Two-Stage Hybrid Search Architecture
 This architecture implements multi-index parallel retrieval:
 - **Dense Vector Search**: Captures high-level conceptual intent and semantic meaning via continuous cosine projections.
 - **Sparse Okapi BM25**: Captures exact keyword token intersections, acronyms, and term frequency saturation ($k_1=1.5, b=0.75$).
@@ -124,9 +124,9 @@ curl -X POST "http://localhost:8000/api/v1/search" \
 
 ---
 
-## 🎓 FAANG Placement Interview Defense Guide
+## 🎓 Technical Interview Defense & Design Decisions
 
-If a technical interviewer at **Google, Amazon, Meta, or Microsoft** asks about this project, here is how you defend every design decision:
+If an interviewer or engineering team asks about this project, here is how you defend every design decision:
 
 ### Q1: "Why Reciprocal Rank Fusion (RRF) instead of simple linear score weighting (e.g. $\alpha \cdot \text{Dense} + (1-\alpha) \cdot \text{BM25}$)?"
 > **Answer**: *"Dense cosine similarities typically range from [0, 1] while BM25 scores are unbounded $[0, \infty)$ depending on corpus frequency. Linear combination requires continuous score calibration and normalization min-maxing across corpus updates. RRF operates purely on ordinal ranks, making it immune to scale mismatch, outlier scores, and shifting document distributions without tuning unstable weighting hyperparameters."*
@@ -139,7 +139,7 @@ If a technical interviewer at **Google, Amazon, Meta, or Microsoft** asks about 
 
 ---
 
-## 💼 Resume Bullet Points (Copy-Paste Ready for Tier-1 / FAANG)
+## 💼 Production Resume Bullet Points
 
 - **Engineered a production-grade Two-Stage Hybrid Semantic Search Engine** in Python/FastAPI combining dense vector embeddings with Okapi BM25 via Reciprocal Rank Fusion ($k=60$), lifting retrieval relevance by **+12.8% NDCG@10** over standalone dense vector search.
 - **Developed a responsive real-time web application (Tailwind CSS, HTML5 Canvas)** featuring dynamic 2D vector space visualization (PCA dimensionality reduction), live query term highlighting, sub-2ms telemetry breakdown, and instant document ingestion.
