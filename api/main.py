@@ -19,6 +19,16 @@ CORPUS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "corpus.json
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
 engine = HybridSearchEngine(embedding_dim=32)
 
+def load_and_index_corpus():
+    if os.path.exists(CORPUS_PATH):
+        with open(CORPUS_PATH, "r", encoding="utf-8") as f:
+            docs = json.load(f)
+        engine.build_index(docs)
+        print(f"Loaded and indexed {len(docs)} documents.")
+
+# Initialize on module import
+load_and_index_corpus()
+
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -31,14 +41,11 @@ def serve_ui():
 
 @app.on_event("startup")
 def startup_event():
-    if os.path.exists(CORPUS_PATH):
-        with open(CORPUS_PATH, "r", encoding="utf-8") as f:
-            docs = json.load(f)
-        engine.build_index(docs)
-        print(f"Loaded and indexed {len(docs)} documents on startup.")
+    if not engine.corpus:
+        load_and_index_corpus()
 
 class SearchQueryRequest(BaseModel):
-    query: str = Field(..., example="How do approximate nearest neighbors work in vector search?")
+    query: str = Field(..., json_schema_extra={"example": "How do approximate nearest neighbors work in vector search?"})
     top_k: int = Field(default=5, ge=1, le=50)
     mode: str = Field(default="hybrid", description="Retrieval mode: hybrid, dense, or sparse")
     rrf_k: int = Field(default=60, ge=1, le=100, description="RRF smoothing constant k")

@@ -23,10 +23,12 @@ Modern Information Retrieval (IR) and Retrieval-Augmented Generation (RAG) face 
 
 ### The FAANG Solution: Two-Stage Hybrid Search
 This architecture implements multi-index parallel retrieval:
-- **Dense Vector Search**: Captures high-level conceptual intent and semantic meaning.
-- **Sparse Okapi BM25**: Captures exact keyword token intersections and term frequency saturation.
-- **Reciprocal Rank Fusion (RRF)**: Merges disparate score distributions without needing uncalibrated score normalization.
+- **Dense Vector Search**: Captures high-level conceptual intent and semantic meaning via continuous cosine projections.
+- **Sparse Okapi BM25**: Captures exact keyword token intersections, acronyms, and term frequency saturation ($k_1=1.5, b=0.75$).
+- **Reciprocal Rank Fusion (RRF)**: Merges disparate score distributions into ordinal ranks ($k=60$) without needing uncalibrated score normalization.
 - **Cross-Encoder Re-Ranking**: Computes deep cross-attention across top candidates for precision re-ordering.
+- **2D Semantic Vector Space (PCA)**: Maps high-dimensional embedding topology into 2D canvas coordinates with real-time query vector plotting.
+- **Comprehensive Test Suite**: 8 automated PyTest suites covering end-to-end retrieval, PCA projections, dynamic ingestion, and FastAPI endpoints.
 
 ---
 

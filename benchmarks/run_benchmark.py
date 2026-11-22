@@ -21,6 +21,21 @@ EVALUATION_QUERIES = [
     ("Adam optimizer learning rate schedules", "doc_008"),
     ("Kubernetes service mesh Envoy sidecar architecture", "doc_009"),
     ("Neural network pruning and INT8 quantization", "doc_010"),
+    ("Distributed atomic transactions with two-phase commit protocol", "doc_011"),
+    ("Redis cache-aside and cache invalidation strategies", "doc_012"),
+    ("Inverted index BM25 term frequency saturation", "doc_013"),
+    ("Zero knowledge proofs zk-SNARKs privacy", "doc_014"),
+    ("Kafka partition commit log exactly once processing", "doc_015"),
+    ("Parameter efficient fine tuning LoRA QLoRA", "doc_016"),
+    ("B+ Tree database indexing and query explain plans", "doc_017"),
+    ("QUIC protocol UDP HTTP/3 flow control", "doc_018"),
+    ("Product quantization vector compression memory reduction", "doc_019"),
+    ("OAuth2 JWT stateless tokens RS256 authorization", "doc_020"),
+    ("CAP theorem PACELC trade-offs in distributed databases", "doc_021"),
+    ("Graph neural networks neighborhood message passing GCN", "doc_022"),
+    ("CI CD pipeline automation GitHub Actions multi-stage Docker", "doc_023"),
+    ("Virtual memory page tables and translation lookaside buffer TLB", "doc_024"),
+    ("Reciprocal rank fusion multi-engine ranking", "doc_025"),
 ]
 
 def compute_mrr_and_ndcg(retrieved_ids, target_id, k=10):

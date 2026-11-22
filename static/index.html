@@ -76,13 +76,17 @@
       </div>
 
       <div class="flex items-center space-x-3">
+        <button id="openArchModalBtn" class="flex items-center space-x-1.5 text-xs font-medium text-indigo-300 bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-800/60 px-3 py-1.5 rounded-xl transition">
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+          <span>Architecture & Math</span>
+        </button>
         <button id="openIngestModalBtn" class="flex items-center space-x-1.5 text-xs font-medium text-cyan-400 bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-800/60 px-3 py-1.5 rounded-xl transition">
           <i data-lucide="plus-circle" class="w-4 h-4"></i>
           <span>Add Document</span>
         </button>
         <div class="hidden sm:flex items-center space-x-2 text-xs font-mono text-gray-400 bg-gray-900/80 border border-gray-800 px-3 py-1.5 rounded-full">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Engine Online • P95 <span class="text-cyan-400 font-bold">0.45ms</span></span>
+          <span>Engine Online • <span id="indexedDocsCount" class="text-cyan-400 font-bold">25 Docs</span></span>
         </div>
         <a href="https://github.com/kartik-bhatt767/hybrid-semantic-search-engine" target="_blank" class="text-gray-400 hover:text-white transition p-2 rounded-lg hover:bg-gray-800/60">
           <i data-lucide="github" class="w-5 h-5"></i>
@@ -168,6 +172,15 @@
         <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="LSM Trees vs B-Trees in Modern Storage Engines">
           💾 LSM Trees vs B-Trees
         </button>
+        <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="Kafka event streaming and exactly-once semantics">
+          📨 Kafka Exactly-Once
+        </button>
+        <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="Product quantization vector compression memory reduction">
+          📉 Product Quantization (PQ)
+        </button>
+        <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="Zero-knowledge proofs and modern cryptographic protocols">
+          🔐 Zero-Knowledge (zk-SNARKs)
+        </button>
       </div>
     </div>
 
@@ -231,10 +244,96 @@
         </div>
       </div>
 
+      <div id="resultsHeader" class="hidden flex items-center justify-between pb-1">
+        <span id="resultsCountText" class="text-xs font-mono text-gray-400">Top 5 results</span>
+        <button id="exportJsonBtn" class="flex items-center space-x-1 text-xs font-mono text-cyan-400 hover:text-cyan-300 bg-gray-900 border border-gray-800 hover:border-gray-700 px-2.5 py-1 rounded-lg transition">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span>Export JSON</span>
+        </button>
+      </div>
+
       <div id="cardsList" class="space-y-4"></div>
     </div>
 
   </main>
+
+  <!-- Modal: Architecture & Math -->
+  <div id="archModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-gray-950 border border-gray-800 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-4 border-b border-gray-800 mb-6">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-950 border border-indigo-800 flex items-center justify-center text-indigo-400">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">System Architecture & Mathematical Formulation</h3>
+            <p class="text-xs font-mono text-gray-400">FAANG Information Retrieval Specification</p>
+          </div>
+        </div>
+        <button id="closeArchModalBtn" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-6 text-sm">
+        <!-- Section 1: Two-Stage Multi-Index Architecture -->
+        <div>
+          <h4 class="text-xs font-mono uppercase tracking-wider text-cyan-400 mb-2">1. Two-Stage Multi-Index Retrieval Architecture</h4>
+          <div class="p-4 rounded-xl bg-gray-900/90 border border-gray-800 font-mono text-xs text-gray-300 space-y-2">
+            <div class="flex items-center space-x-2 text-white font-bold">
+              <span>Query</span>
+              <span>➔</span>
+              <span class="text-cyan-400">Parallel Fan-Out</span>
+              <span>➔</span>
+              <span class="text-indigo-400">[Dense (32-dim) + Sparse BM25]</span>
+            </div>
+            <div class="text-gray-400 pl-4 border-l-2 border-gray-700">
+              ➔ <b>Stage 1 Candidate Gathering</b>: Retrieve top-K from both dense and lexical indices.<br/>
+              ➔ <b>Stage 2 Reciprocal Rank Fusion</b>: Merge ordinal ranks with constant k = 60.<br/>
+              ➔ <b>Cross-Encoder Re-Ranking</b>: Token alignment & title proximity boost.
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Mathematical Equations -->
+        <div>
+          <h4 class="text-xs font-mono uppercase tracking-wider text-cyan-400 mb-2">2. Mathematical Formulation</h4>
+          <div class="space-y-3">
+            <div class="p-3.5 rounded-xl bg-gray-900/80 border border-gray-800">
+              <span class="text-xs font-bold text-gray-200">Okapi BM25 Lexical Scoring:</span>
+              <div class="mt-1 font-mono text-xs text-cyan-300 bg-gray-950 p-2.5 rounded-lg border border-gray-800">
+                Score(D, Q) = Σ IDF(qᵢ) · [ f(qᵢ, D) · (k₁ + 1) ] / [ f(qᵢ, D) + k₁ · (1 - b + b · |D|/avgdl) ]
+              </div>
+              <p class="text-[11px] text-gray-400 mt-1 font-mono">* k₁ = 1.5 (Term Frequency saturation) | b = 0.75 (Document length normalization)</p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-gray-900/80 border border-gray-800">
+              <span class="text-xs font-bold text-gray-200">Reciprocal Rank Fusion (RRF):</span>
+              <div class="mt-1 font-mono text-xs text-indigo-300 bg-gray-950 p-2.5 rounded-lg border border-gray-800">
+                RRF_Score(d ∈ D) = Σ_{m ∈ {dense, sparse}} 1 / ( k + rank_m(d) )
+              </div>
+              <p class="text-[11px] text-gray-400 mt-1 font-mono">* k = 60 (Standard smoothing parameter preventing rank-1 dominance across models)</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Interview Defense -->
+        <div>
+          <h4 class="text-xs font-mono uppercase tracking-wider text-cyan-400 mb-2">3. FAANG Placement Interview Defense</h4>
+          <div class="space-y-2.5">
+            <div class="p-3 rounded-xl bg-gray-900/60 border border-gray-800">
+              <p class="text-xs font-semibold text-white">Q: Why RRF instead of linear combination (α · Dense + (1-α) · BM25)?</p>
+              <p class="text-xs text-gray-300 mt-1"><b>A</b>: Dense cosine similarity is bounded [0, 1] while BM25 is unbounded [0, ∞). Linear combinations require constant min-max calibration that breaks with new documents. RRF operates purely on ordinal ranks, making it immune to scale mismatch.</p>
+            </div>
+            <div class="p-3 rounded-xl bg-gray-900/60 border border-gray-800">
+              <p class="text-xs font-semibold text-white">Q: How would you scale this to 100M+ documents?</p>
+              <p class="text-xs text-gray-300 mt-1"><b>A</b>: Shard horizontally into an HNSW cluster (e.g. Milvus/Qdrant) for dense vectors and an Elasticsearch/Lucene cluster for BM25. The gateway queries both concurrently, gathers top-100 candidates from each, executes RRF fusion in &lt;5ms, and runs top-20 candidates through a lightweight ONNX cross-encoder.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal: Ingest New Document -->
   <div id="ingestModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
@@ -286,6 +385,7 @@
 
     let currentMode = "hybrid";
     let currentK = 60;
+    let lastSearchResults = null;
 
     const queryInput = document.getElementById('queryInput');
     const searchBtn = document.getElementById('searchBtn');
@@ -293,11 +393,54 @@
     const emptyState = document.getElementById('emptyState');
     const loadingState = document.getElementById('loadingState');
     const cardsList = document.getElementById('cardsList');
+    const resultsHeader = document.getElementById('resultsHeader');
+    const resultsCountText = document.getElementById('resultsCountText');
+    const exportJsonBtn = document.getElementById('exportJsonBtn');
     const telemetryBar = document.getElementById('telemetryBar');
     const vectorMapPanel = document.getElementById('vectorMapPanel');
     const vectorCanvas = document.getElementById('vectorCanvas');
     const kSlider = document.getElementById('kSlider');
     const kVal = document.getElementById('kVal');
+    const indexedDocsCount = document.getElementById('indexedDocsCount');
+
+    // Architecture Modal Controls
+    const archModal = document.getElementById('archModal');
+    const openArchModalBtn = document.getElementById('openArchModalBtn');
+    const closeArchModalBtn = document.getElementById('closeArchModalBtn');
+
+    openArchModalBtn.addEventListener('click', () => archModal.classList.remove('hidden'));
+    closeArchModalBtn.addEventListener('click', () => archModal.classList.add('hidden'));
+    archModal.addEventListener('click', (e) => {
+      if (e.target === archModal) archModal.classList.add('hidden');
+    });
+
+    // Check health on startup to get live document count
+    async function updateCorpusBadge() {
+      try {
+        const res = await fetch('/health');
+        if (res.ok) {
+          const data = await res.json();
+          if (indexedDocsCount && data.indexed_documents) {
+            indexedDocsCount.textContent = `${data.indexed_documents} Docs`;
+          }
+        }
+      } catch (e) {
+        console.warn('Health check badge error:', e);
+      }
+    }
+    updateCorpusBadge();
+
+    // Export Search Results JSON
+    exportJsonBtn.addEventListener('click', () => {
+      if (!lastSearchResults) return;
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lastSearchResults, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `search_results_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    });
 
     // Mode Toggle Tabs
     const modeTabs = document.querySelectorAll('.mode-tab');
@@ -395,6 +538,10 @@
 
     function renderResults(data) {
       loadingState.classList.add('hidden');
+      lastSearchResults = data;
+
+      resultsHeader.classList.remove('hidden');
+      resultsCountText.textContent = `Retrieved ${data.results.length} candidates in ${data.latency_breakdown_ms.total_e2e.toFixed(2)}ms (Mode: ${data.mode.toUpperCase()})`;
       
       const l = data.latency_breakdown_ms;
       document.getElementById('latTotal').textContent = l.total_e2e.toFixed(2) + ' ms';
@@ -536,6 +683,7 @@
         toggleModal(false);
         ingestForm.reset();
         
+        if (indexedDocsCount) indexedDocsCount.textContent = `${result.total_documents} Docs`;
         document.getElementById('toastMsg').textContent = `Indexed "${title}" (${result.total_documents} total docs)`;
         toast.classList.remove('hidden');
         setTimeout(() => toast.classList.add('hidden'), 4000);

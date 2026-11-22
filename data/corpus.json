@@ -50,13 +50,103 @@
   {
     "id": "doc_009",
     "title": "Container Orchestration and Service Mesh with Kubernetes and Envoy",
-    "content": "Kubernetes manages containerized workloads with declarative manifests, rolling updates, and ingress controllers. Envoy proxy provides sidecar service meshes with mTLS, distributed tracing, and circuit breakers.",
+    "content": "Container orchestration via Kubernetes schedules pods across nodes with declarative manifests. Envoy proxy sidecars establish mutual TLS, circuit breaking, distributed tracing, and traffic shaping in microservices.",
     "category": "DevOps & Cloud"
   },
   {
     "id": "doc_010",
     "title": "Quantization and Pruning for Edge ML Inference",
-    "content": "Model compression techniques like INT8 Post-Training Quantization (PTQ) and structured pruning reduce memory bandwidth footprint and accelerate neural inference on constrained mobile GPUs and edge TPUs.",
+    "content": "Deploying deep neural networks on resource-constrained edge hardware requires post-training INT8 quantization and structured weight pruning to reduce memory footprint and latency while preserving model perplexity.",
     "category": "Edge AI"
+  },
+  {
+    "id": "doc_011",
+    "title": "Distributed Transactions and Two-Phase Commit (2PC)",
+    "content": "Coordinating atomic transactions across distributed database shards requires two-phase commit protocol with prepare and commit phases. Sagas and event-driven choreography provide scalable eventual consistency.",
+    "category": "Distributed Systems"
+  },
+  {
+    "id": "doc_012",
+    "title": "Cache Invalidation Strategies and Redis Distributed Caching",
+    "content": "High-throughput architectures use Redis for caching database queries. Common caching strategies include cache-aside, write-through, and write-behind, paired with TTL expiration and LRU eviction policies.",
+    "category": "System Design"
+  },
+  {
+    "id": "doc_013",
+    "title": "Inverted Indexes and Okapi BM25 Lexical Ranking",
+    "content": "Full-text search engines like Lucene and Elasticsearch build inverted indexes mapping terms to postings lists. Okapi BM25 scores document relevance with term frequency saturation (k1=1.5) and document length penalty (b=0.75).",
+    "category": "Information Retrieval"
+  },
+  {
+    "id": "doc_014",
+    "title": "Zero-Knowledge Proofs and Modern Cryptographic Protocols",
+    "content": "Zero-knowledge proofs such as zk-SNARKs and zk-STARKs allow a prover to demonstrate possession of secret knowledge to a verifier without revealing the underlying data, enabling private verifiable computing.",
+    "category": "Security"
+  },
+  {
+    "id": "doc_015",
+    "title": "Kafka Event Streaming and Exactly-Once Semantics",
+    "content": "Apache Kafka provides append-only distributed commit logs partitioned across brokers. Consumer group offset management and transactional producers guarantee exactly-once processing (EOS) semantics in stream processing.",
+    "category": "Distributed Systems"
+  },
+  {
+    "id": "doc_016",
+    "title": "Fine-Tuning LLMs with LoRA and QLoRA Parameter-Efficient Adapters",
+    "content": "Low-Rank Adaptation (LoRA) freezes pretrained transformer weights and injects trainable rank decomposition matrices into self-attention layers. QLoRA quantizes the base model to 4-bit NormalFloat to drastically reduce VRAM.",
+    "category": "Deep Learning"
+  },
+  {
+    "id": "doc_017",
+    "title": "Database Indexing: Composite Indexes, Covering Indexes, and Explain Plans",
+    "content": "Relational query performance relies on B+ Tree index traversal. Composite indexes enforce column order rules, covering indexes eliminate table lookups, and EXPLAIN ANALYZE inspects cost-based query planner operations.",
+    "category": "Databases"
+  },
+  {
+    "id": "doc_018",
+    "title": "TCP Flow Control, Congestion Control, and QUIC / HTTP/3",
+    "content": "TCP reliability depends on sliding window flow control and congestion avoidance algorithms like BBR and Cubic. HTTP/3 replaces TCP with QUIC over UDP, eliminating head-of-line blocking and accelerating connection handshakes.",
+    "category": "Networking"
+  },
+  {
+    "id": "doc_019",
+    "title": "Vector Embeddings Quantization: Scalar vs Product Quantization (PQ)",
+    "content": "Scaling vector databases to billions of vectors requires lossy vector compression. Product Quantization (PQ) decomposes high-dimensional vectors into orthogonal sub-vectors and clusters them into codebooks, reducing RAM by 90%.",
+    "category": "Vector Search"
+  },
+  {
+    "id": "doc_020",
+    "title": "OAuth 2.0, OpenID Connect, and JWT Stateless Authentication",
+    "content": "Modern API authorization employs OAuth 2.0 bearer tokens and OpenID Connect identity claims. JSON Web Tokens (JWT) enable stateless verification using asymmetric RS256 digital signatures with JWKS key rotation.",
+    "category": "Security"
+  },
+  {
+    "id": "doc_021",
+    "title": "CAP Theorem, PACELC, and Partition Tolerance in NoSQL",
+    "content": "The CAP theorem proves distributed systems cannot simultaneously achieve Consistency, Availability, and Partition tolerance. The PACELC theorem extends this: if Partitioned, trade Availability vs Consistency; Else, trade Latency vs Consistency.",
+    "category": "Distributed Systems"
+  },
+  {
+    "id": "doc_022",
+    "title": "Graph Neural Networks (GNN) and Message Passing Schemes",
+    "content": "Graph Convolutional Networks (GCN) and Graph Attention Networks (GAT) aggregate neighborhood feature vectors through spatial message passing, excelling at node classification, link prediction, and molecular modeling.",
+    "category": "Deep Learning"
+  },
+  {
+    "id": "doc_023",
+    "title": "CI/CD Automation with GitHub Actions and Hermetic Builds",
+    "content": "Continuous integration pipelines run linters, security scanners, unit test suites, and Docker multi-stage image builds. Matrix test runners validate compatibility across Python versions before deploying artifacts.",
+    "category": "DevOps & Cloud"
+  },
+  {
+    "id": "doc_024",
+    "title": "Operating System Virtual Memory, Page Tables, and TLB",
+    "content": "The OS kernel manages virtual memory via multi-level page tables and Memory Management Units (MMU). Translation Lookaside Buffers (TLB) cache physical address translations to avoid expensive page table walks on cache misses.",
+    "category": "System Design"
+  },
+  {
+    "id": "doc_025",
+    "title": "Reciprocal Rank Fusion (RRF) for Combining Disparate Search Systems",
+    "content": "Reciprocal Rank Fusion merges rankings from diverse retrieval models without score calibration. Computing score = sum(1 / (k + rank)) rewards documents consistently ranked near the top across multiple independent search engines.",
+    "category": "Information Retrieval"
   }
 ]
