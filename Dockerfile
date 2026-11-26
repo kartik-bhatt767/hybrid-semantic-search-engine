@@ -1,4 +1,4 @@
-# Multi-stage production container for FAANG-grade ML microservice
+# Multi-stage production container for Hybrid Semantic Search Engine microservice
 FROM python:3.10-slim AS builder
 
 WORKDIR /app

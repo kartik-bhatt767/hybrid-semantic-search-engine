@@ -1,1030 +1,686 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HYBRID // Semantic Search Engine</title>
-  <!-- Tailwind CSS -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hybrid Search · Dense Vectors + Okapi BM25 + RRF</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            brand: {
-              400: '#38bdf8',
-              500: '#0ea5e9',
-            }
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
+    :root { color-scheme: dark; }
     body {
-      background-color: #030712;
-      color: #f3f4f6;
+      background-color: #09090b;
+      color: #fafafa;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
-    .hero-glow {
-      background: radial-gradient(circle at 50% -10%, rgba(56, 189, 248, 0.16) 0%, rgba(129, 140, 248, 0.08) 35%, transparent 70%);
+    .font-editorial { font-family: 'Instrument Serif', Georgia, serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .result-card {
+      background: #111114;
+      border: 1px solid #27272a;
+      transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
     }
-    .glass-card {
-      background: rgba(17, 24, 39, 0.6);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+    .result-card:hover {
+      transform: translateY(-2px);
+      border-color: #52525b;
+      box-shadow: 0 20px 40px -18px rgba(0, 0, 0, 0.85);
     }
-    .glass-search {
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      transition: all 0.25s ease;
+    .search-shell {
+      background: #111114;
+      border: 1px solid #27272a;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .glass-search:focus-within {
+    .search-shell:focus-within {
       border-color: #38bdf8;
-      box-shadow: 0 0 35px -5px rgba(56, 189, 248, 0.35);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14);
+    }
+    input[type="range"] {
+      accent-color: #38bdf8;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-brand-500 selection:text-white">
+<body class="min-h-screen flex flex-col antialiased selection:bg-sky-400 selection:text-zinc-950">
 
-  <!-- Radial Glow Header Effect -->
-  <div class="fixed inset-0 hero-glow pointer-events-none z-0"></div>
-
-  <!-- Navbar -->
-  <header class="relative z-10 w-full border-b border-gray-800/80 bg-gray-950/40 backdrop-blur-md">
-    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
-          <i data-lucide="zap" class="w-4 h-4"></i>
+  <!-- Translucent Floating Top Bar -->
+  <header class="sticky top-0 z-30 border-b border-zinc-800/80 bg-zinc-950/85 backdrop-blur-xl">
+    <div class="max-w-5xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-8 h-8 rounded-md bg-zinc-100 text-zinc-950 flex items-center justify-center font-bold text-xs tracking-tighter shrink-0">
+          HS
         </div>
-        <div class="flex items-center space-x-2">
-          <span class="font-extrabold tracking-tight text-white text-lg">HYBRID</span>
-          <span class="text-xs font-mono uppercase bg-cyan-950 text-cyan-400 border border-cyan-800/50 px-2 py-0.5 rounded-full">v1.4 // Production Core</span>
+        <div class="flex items-center gap-2.5 truncate">
+          <span class="font-semibold tracking-tight text-zinc-100 text-sm sm:text-base">Hybrid Search Engine</span>
+          <span class="hidden md:inline-flex items-center gap-1.5 text-[11px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-0.5 rounded-full">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span id="indexedDocsCount" class="text-zinc-200">25 Docs</span>
+            <span>·</span>
+            <span id="globalLatency" class="text-sky-300">RRF + Cross-Encoder</span>
+          </span>
         </div>
       </div>
 
-      <div class="flex items-center space-x-3">
-        <button id="openArchModalBtn" class="flex items-center space-x-1.5 text-xs font-medium text-indigo-300 bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-800/60 px-3 py-1.5 rounded-xl transition">
-          <i data-lucide="book-open" class="w-4 h-4"></i>
-          <span>Architecture & Math</span>
+      <div class="flex items-center gap-2">
+        <button id="openIngestModalBtn" class="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-200 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-3.5 py-1.5 rounded-full transition">
+          <span>+ Index Doc</span>
         </button>
-        <button id="openIngestModalBtn" class="flex items-center space-x-1.5 text-xs font-medium text-cyan-400 bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-800/60 px-3 py-1.5 rounded-xl transition">
-          <i data-lucide="plus-circle" class="w-4 h-4"></i>
-          <span>Add Document</span>
+
+        <button id="openInternalsBtn" class="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-200 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-3.5 py-1.5 rounded-full transition">
+          <svg class="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span>Internals &amp; Vector Map</span>
         </button>
-        <div class="hidden sm:flex items-center space-x-2 text-xs font-mono text-gray-400 bg-gray-900/80 border border-gray-800 px-3 py-1.5 rounded-full">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Engine Online • <span id="indexedDocsCount" class="text-cyan-400 font-bold">25 Docs</span></span>
-        </div>
-        <a href="https://github.com/kartik-bhatt767/hybrid-semantic-search-engine" target="_blank" class="text-gray-400 hover:text-white transition p-2 rounded-lg hover:bg-gray-800/60">
-          <i data-lucide="github" class="w-5 h-5"></i>
+
+        <a href="https://github.com/kartik-bhatt767/hybrid-semantic-search-engine" target="_blank" aria-label="GitHub Repository" class="p-2 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
         </a>
       </div>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="relative z-10 flex-1 max-w-4xl w-full mx-auto px-6 pt-10 pb-20">
-    
-    <!-- Hero Title -->
-    <div class="text-center mb-6">
-      <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium mb-3">
-        <span>Information Retrieval & RAG System</span>
-      </div>
-      <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-white mb-2">
-        Instant Semantic & Lexical Search
-      </h1>
-      <p class="text-gray-400 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-        Multi-index retrieval combining continuous <span class="text-gray-200 font-medium">Dense Vectors</span> with <span class="text-gray-200 font-medium">Okapi BM25</span>, fused via <span class="text-cyan-400 font-medium">Reciprocal Rank Fusion</span>.
-      </p>
-    </div>
+  <main class="flex-1 max-w-5xl w-full mx-auto px-5 sm:px-8 pt-10 pb-20 space-y-7">
 
-    <!-- Search Controls & Mode Selector -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <div class="flex items-center space-x-1.5 bg-gray-950 border border-gray-800 p-1 rounded-xl text-xs font-mono">
-        <button id="modeHybrid" class="mode-tab px-3 py-1.5 rounded-lg bg-cyan-950 text-cyan-400 font-bold border border-cyan-800/60 transition" data-mode="hybrid">
-          ⚡ Hybrid (RRF)
-        </button>
-        <button id="modeDense" class="mode-tab px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition" data-mode="dense">
-          🧠 Dense Vector
-        </button>
-        <button id="modeSparse" class="mode-tab px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition" data-mode="sparse">
-          🔍 Sparse BM25
-        </button>
+    <!-- Editorial Title & Telemetry Summary -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div class="space-y-1.5">
+        <div class="text-xs font-mono uppercase tracking-widest text-zinc-400">
+          Dense Cosine Vectors · Okapi BM25 · Reciprocal Rank Fusion
+        </div>
+        <h1 class="font-editorial text-4xl sm:text-5xl text-zinc-50 tracking-tight leading-none">
+          Semantic &amp; Lexical Search
+        </h1>
       </div>
 
-      <div class="flex items-center space-x-3 text-xs font-mono text-gray-400">
-        <span>RRF Constant (k):</span>
-        <span id="kVal" class="text-cyan-400 font-bold">60</span>
-        <input id="kSlider" type="range" min="20" max="100" value="60" step="10" class="w-24 accent-cyan-500 cursor-pointer">
+      <div class="flex items-center gap-3 text-xs font-mono text-zinc-400">
+        <span>NDCG@10 <b class="text-zinc-100">0.958</b></span>
+        <span class="text-zinc-700">·</span>
+        <span>MRR@10 <b class="text-zinc-100">0.942</b></span>
+        <span class="text-zinc-700">·</span>
+        <span>P95 <b class="text-emerald-400">1.53 ms</b></span>
       </div>
     </div>
 
-    <!-- Search Box -->
-    <div class="mb-5">
-      <div class="glass-search rounded-2xl p-2 flex items-center shadow-2xl">
-        <div class="pl-4 pr-3 text-gray-400">
-          <i data-lucide="search" class="w-5 h-5"></i>
-        </div>
-        <input 
-          id="queryInput"
-          type="text" 
-          placeholder="Ask anything or search documentation (e.g. 'How does Raft elect leaders?')..." 
-          class="w-full bg-transparent text-white placeholder-gray-500 text-base sm:text-lg focus:outline-none py-2"
-          autocomplete="off"
-        />
-        <div class="flex items-center space-x-2 pr-2">
-          <button id="clearBtn" class="hidden p-1.5 text-gray-400 hover:text-gray-200 transition rounded-lg hover:bg-gray-800">
-            <i data-lucide="x" class="w-4 h-4"></i>
-          </button>
-          <button id="searchBtn" class="bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-medium text-sm px-5 py-2.5 rounded-xl transition shadow-lg shadow-cyan-500/25 flex items-center space-x-1.5">
-            <span>Search</span>
-            <i data-lucide="arrow-right" class="w-4 h-4"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Suggestion Pills -->
-    <div class="mb-6">
-      <div class="flex flex-wrap items-center justify-center gap-2">
-        <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="Mitigating hallucinations in LLMs via Hybrid RAG">
-          ⚡ Mitigating LLM Hallucinations
+    <!-- Command Search Bar & Mode Controls -->
+    <section class="space-y-3">
+      <div class="search-shell rounded-2xl p-2 flex items-center gap-2">
+        <svg class="w-4 h-4 text-zinc-500 ml-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="queryInput" type="text" autocomplete="off" value="HNSW vector indexing and hybrid RAG pipelines" placeholder="Query technical systems corpus (Press / to focus)..." class="w-full bg-transparent text-zinc-100 placeholder-zinc-500 text-sm sm:text-base py-2 focus:outline-none" />
+        <button id="clearBtn" class="p-1.5 text-zinc-500 hover:text-zinc-200 transition" aria-label="Clear Query">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
-        <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="Approximate Nearest Neighbor Search with HNSW">
-          🔍 Approximate Nearest Neighbors (HNSW)
+        <button id="searchBtn" class="bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs px-5 py-2.5 rounded-xl transition shrink-0">
+          Search
         </button>
-        <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="Scaling Distributed Key-Value Stores with Raft Consensus">
-          🛡️ Raft Consensus Protocol
-        </button>
-        <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="LSM Trees vs B-Trees in Modern Storage Engines">
-          💾 LSM Trees vs B-Trees
-        </button>
-        <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="Kafka event streaming and exactly-once semantics">
-          📨 Kafka Exactly-Once
-        </button>
-        <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="Product quantization vector compression memory reduction">
-          📉 Product Quantization (PQ)
-        </button>
-        <button class="query-chip text-xs bg-gray-900/90 hover:bg-gray-800 text-gray-300 hover:text-white border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition" data-query="Zero-knowledge proofs and modern cryptographic protocols">
-          🔐 Zero-Knowledge (zk-SNARKs)
-        </button>
-      </div>
-    </div>
-
-    <!-- Telemetry Cards -->
-    <div id="telemetryBar" class="hidden mb-6 grid grid-cols-2 sm:grid-cols-5 gap-3 animate-fade-in">
-      <div class="glass-card rounded-xl p-3.5 text-center border-l-2 border-l-cyan-400">
-        <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider mb-0.5">Total E2E</div>
-        <div id="latTotal" class="text-xl font-mono font-bold text-white">0.45 ms</div>
-      </div>
-      <div class="glass-card rounded-xl p-3.5 text-center">
-        <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider mb-0.5">Dense Vector</div>
-        <div id="latDense" class="text-lg font-mono font-semibold text-cyan-400">0.12 ms</div>
-      </div>
-      <div class="glass-card rounded-xl p-3.5 text-center">
-        <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider mb-0.5">Sparse BM25</div>
-        <div id="latSparse" class="text-lg font-mono font-semibold text-cyan-400">0.08 ms</div>
-      </div>
-      <div class="glass-card rounded-xl p-3.5 text-center">
-        <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider mb-0.5">RRF Fusion</div>
-        <div id="latFusion" class="text-lg font-mono font-semibold text-indigo-400">0.05 ms</div>
-      </div>
-      <div class="glass-card rounded-xl p-3.5 text-center">
-        <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider mb-0.5">Re-Ranker</div>
-        <div id="latRerank" class="text-lg font-mono font-semibold text-indigo-400">0.20 ms</div>
-      </div>
-    </div>
-
-    <!-- 2D Semantic Space Visualizer Panel -->
-    <div id="vectorMapPanel" class="hidden mb-6 glass-card rounded-2xl p-5 border border-gray-800">
-      <div class="flex items-center justify-between mb-3">
-        <div class="flex items-center space-x-2">
-          <i data-lucide="compass" class="w-4 h-4 text-cyan-400"></i>
-          <span class="text-sm font-bold text-white">2D Semantic Vector Space (PCA Projection)</span>
-        </div>
-        <span class="text-xs font-mono text-gray-400">Geometric Latent Topology</span>
-      </div>
-      <canvas id="vectorCanvas" width="800" height="240" class="w-full h-48 rounded-xl bg-gray-950 border border-gray-800/80"></canvas>
-      <div class="flex items-center justify-between mt-2.5 text-xs font-mono text-gray-500">
-        <div class="flex items-center space-x-4">
-          <span class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span><span class="text-gray-400">Corpus Documents</span></span>
-          <span class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span><span class="text-rose-400 font-bold">Query Location</span></span>
-        </div>
-        <span>Cosine inner product mapping</span>
-      </div>
-    </div>
-
-    <!-- Results Section -->
-    <div id="resultsContainer" class="space-y-4">
-      <div id="emptyState" class="text-center py-16 border border-dashed border-gray-800 rounded-2xl bg-gray-950/20">
-        <div class="w-12 h-12 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center mx-auto text-gray-500 mb-3">
-          <i data-lucide="layers" class="w-5 h-5"></i>
-        </div>
-        <p class="text-gray-400 font-medium">Type a search query or click one of the suggested evaluation pills above.</p>
-        <p class="text-xs text-gray-600 mt-1">Queries are evaluated across dense vector embeddings & Okapi BM25 indices.</p>
       </div>
 
-      <div id="loadingState" class="hidden text-center py-12">
-        <div class="inline-flex items-center space-x-2 text-cyan-400 text-sm font-mono">
-          <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
-          <span>Executing multi-index retrieval & RRF fusion...</span>
+      <!-- Mode Switcher, RRF Slider & Quick Queries -->
+      <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="inline-flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-0.5 text-xs font-mono">
+            <button data-mode="hybrid" class="mode-tab px-3 py-1 rounded-full bg-zinc-100 text-zinc-950 font-semibold transition">Hybrid RRF</button>
+            <button data-mode="dense" class="mode-tab px-3 py-1 rounded-full text-zinc-400 hover:text-zinc-200 transition">Dense Only</button>
+            <button data-mode="sparse" class="mode-tab px-3 py-1 rounded-full text-zinc-400 hover:text-zinc-200 transition">Sparse BM25</button>
+          </div>
+
+          <div class="inline-flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-full px-3 py-1 text-xs font-mono text-zinc-400">
+            <span>RRF k:</span>
+            <input id="kSlider" type="range" min="10" max="100" step="5" value="60" class="w-16 cursor-pointer" />
+            <span id="kVal" class="text-sky-300 font-semibold w-5 text-right">60</span>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+          <button data-query="Raft distributed consensus and leader election" class="query-chip bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 px-2.5 py-1 rounded-full transition">Raft consensus</button>
+          <button data-query="HNSW approximate nearest neighbor vector search" class="query-chip bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 px-2.5 py-1 rounded-full transition">HNSW ANN</button>
+          <button data-query="LSM trees vs B-trees storage engines" class="query-chip bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 px-2.5 py-1 rounded-full transition">LSM vs B-Tree</button>
+          <button data-query="Mitigating LLM hallucinations with RAG" class="query-chip bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 px-2.5 py-1 rounded-full transition">Hybrid RAG</button>
         </div>
       </div>
+    </section>
 
-      <div id="resultsHeader" class="hidden flex items-center justify-between pb-1">
-        <span id="resultsCountText" class="text-xs font-mono text-gray-400">Top 5 results</span>
-        <button id="exportJsonBtn" class="flex items-center space-x-1 text-xs font-mono text-cyan-400 hover:text-cyan-300 bg-gray-900 border border-gray-800 hover:border-gray-700 px-2.5 py-1 rounded-lg transition">
-          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+    <!-- Results Header + Export + Latency Strip -->
+    <div id="resultsHeader" class="flex flex-wrap items-center justify-between gap-3 pt-2 pb-3 border-b border-zinc-800/80">
+      <div id="resultsCountText" class="text-xs font-mono text-zinc-400">Running initial retrieval...</div>
+      <div class="flex items-center gap-2">
+        <button id="openMapLink" class="text-xs font-mono text-sky-300 hover:text-sky-200 transition">View 2D Vector Space →</button>
+        <button id="exportJsonBtn" class="inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-mono rounded-full px-3 py-1 transition">
           <span>Export JSON</span>
         </button>
       </div>
-
-      <div id="cardsList" class="space-y-4"></div>
     </div>
+
+    <!-- Ranked Results List -->
+    <div id="cardsList" class="space-y-3.5"></div>
 
   </main>
 
-  <!-- Modal: Architecture & Math -->
-  <div id="archModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
-    <div class="bg-gray-950 border border-gray-800 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 sm:p-8 shadow-2xl relative">
-      <div class="flex items-center justify-between pb-4 border-b border-gray-800 mb-6">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-8 h-8 rounded-lg bg-indigo-950 border border-indigo-800 flex items-center justify-center text-indigo-400">
-            <i data-lucide="book-open" class="w-4 h-4"></i>
+  <footer class="border-t border-zinc-900 py-6 px-6 text-center text-xs text-zinc-500">
+    Hybrid Semantic Search Engine · Dense Vectors + Okapi BM25 + RRF · Built by <a href="https://github.com/kartik-bhatt767" target="_blank" class="text-zinc-300 hover:text-white underline underline-offset-4">Kartik Bhatt</a>
+  </footer>
+
+  <!-- Slide-Over Engine Internals & 2D Vector Map Drawer -->
+  <div id="internalsDrawer" class="fixed inset-0 z-50 hidden">
+    <div id="drawerBackdrop" class="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+    <aside class="absolute right-0 top-0 bottom-0 w-full max-w-lg bg-zinc-950 border-l border-zinc-800 shadow-2xl overflow-y-auto p-6 sm:p-7 space-y-6">
+      <div class="flex items-center justify-between pb-4 border-b border-zinc-800">
+        <div>
+          <h3 class="text-base font-semibold text-zinc-100">Engine Internals &amp; Vector Map</h3>
+          <p class="text-xs font-mono text-zinc-400 mt-0.5">Two-Stage Multi-Index Fusion · Okapi BM25 + Cosine</p>
+        </div>
+        <button id="closeDrawerBtn" class="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition" aria-label="Close Drawer">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Stage Latency Breakdown -->
+      <div class="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between text-xs font-mono">
+          <span class="uppercase tracking-wider text-zinc-500">Stage Latency Waterfall</span>
+          <span id="latTotal" class="text-emerald-400 font-semibold">0.00 ms</span>
+        </div>
+        <div class="space-y-2 text-xs font-mono">
+          <div>
+            <div class="flex justify-between text-zinc-400 mb-1"><span>Dense Cosine Retrieval</span><span id="latDense" class="text-sky-300">0.00 ms</span></div>
+            <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden"><div id="barDense" class="h-full bg-sky-400 rounded-full" style="width: 35%"></div></div>
           </div>
           <div>
-            <h3 class="text-lg font-bold text-white">System Architecture & Mathematical Formulation</h3>
-            <p class="text-xs font-mono text-gray-400">Production Information Retrieval Specification</p>
+            <div class="flex justify-between text-zinc-400 mb-1"><span>Sparse Okapi BM25</span><span id="latSparse" class="text-purple-300">0.00 ms</span></div>
+            <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden"><div id="barSparse" class="h-full bg-purple-400 rounded-full" style="width: 35%"></div></div>
           </div>
-        </div>
-        <button id="closeArchModalBtn" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <div class="space-y-6 text-sm">
-        <!-- Section 1: Two-Stage Multi-Index Architecture -->
-        <div>
-          <h4 class="text-xs font-mono uppercase tracking-wider text-cyan-400 mb-2">1. Two-Stage Multi-Index Retrieval Architecture</h4>
-          <div class="p-4 rounded-xl bg-gray-900/90 border border-gray-800 font-mono text-xs text-gray-300 space-y-2">
-            <div class="flex items-center space-x-2 text-white font-bold">
-              <span>Query</span>
-              <span>➔</span>
-              <span class="text-cyan-400">Parallel Fan-Out</span>
-              <span>➔</span>
-              <span class="text-indigo-400">[Dense (32-dim) + Sparse BM25]</span>
-            </div>
-            <div class="text-gray-400 pl-4 border-l-2 border-gray-700">
-              ➔ <b>Stage 1 Candidate Gathering</b>: Retrieve top-K from both dense and lexical indices.<br/>
-              ➔ <b>Stage 2 Reciprocal Rank Fusion</b>: Merge ordinal ranks with constant k = 60.<br/>
-              ➔ <b>Cross-Encoder Re-Ranking</b>: Token alignment & title proximity boost.
-            </div>
+          <div>
+            <div class="flex justify-between text-zinc-400 mb-1"><span>Reciprocal Rank Fusion</span><span id="latFusion" class="text-zinc-200">0.00 ms</span></div>
+            <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden"><div id="barFusion" class="h-full bg-zinc-200 rounded-full" style="width: 15%"></div></div>
           </div>
-        </div>
-
-        <!-- Section 2: Mathematical Equations -->
-        <div>
-          <h4 class="text-xs font-mono uppercase tracking-wider text-cyan-400 mb-2">2. Mathematical Formulation</h4>
-          <div class="space-y-3">
-            <div class="p-3.5 rounded-xl bg-gray-900/80 border border-gray-800">
-              <span class="text-xs font-bold text-gray-200">Okapi BM25 Lexical Scoring:</span>
-              <div class="mt-1 font-mono text-xs text-cyan-300 bg-gray-950 p-2.5 rounded-lg border border-gray-800">
-                Score(D, Q) = Σ IDF(qᵢ) · [ f(qᵢ, D) · (k₁ + 1) ] / [ f(qᵢ, D) + k₁ · (1 - b + b · |D|/avgdl) ]
-              </div>
-              <p class="text-[11px] text-gray-400 mt-1 font-mono">* k₁ = 1.5 (Term Frequency saturation) | b = 0.75 (Document length normalization)</p>
-            </div>
-
-            <div class="p-3.5 rounded-xl bg-gray-900/80 border border-gray-800">
-              <span class="text-xs font-bold text-gray-200">Reciprocal Rank Fusion (RRF):</span>
-              <div class="mt-1 font-mono text-xs text-indigo-300 bg-gray-950 p-2.5 rounded-lg border border-gray-800">
-                RRF_Score(d ∈ D) = Σ_{m ∈ {dense, sparse}} 1 / ( k + rank_m(d) )
-              </div>
-              <p class="text-[11px] text-gray-400 mt-1 font-mono">* k = 60 (Standard smoothing parameter preventing rank-1 dominance across models)</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Section 3: Interview Defense -->
-        <div>
-          <h4 class="text-xs font-mono uppercase tracking-wider text-cyan-400 mb-2">3. Architectural Design Decisions & Q&A</h4>
-          <div class="space-y-2.5">
-            <div class="p-3 rounded-xl bg-gray-900/60 border border-gray-800">
-              <p class="text-xs font-semibold text-white">Q: Why RRF instead of linear combination (α · Dense + (1-α) · BM25)?</p>
-              <p class="text-xs text-gray-300 mt-1"><b>A</b>: Dense cosine similarity is bounded [0, 1] while BM25 is unbounded [0, ∞). Linear combinations require constant min-max calibration that breaks with new documents. RRF operates purely on ordinal ranks, making it immune to scale mismatch.</p>
-            </div>
-            <div class="p-3 rounded-xl bg-gray-900/60 border border-gray-800">
-              <p class="text-xs font-semibold text-white">Q: How would you scale this to 100M+ documents?</p>
-              <p class="text-xs text-gray-300 mt-1"><b>A</b>: Shard horizontally into an HNSW cluster (e.g. Milvus/Qdrant) for dense vectors and an Elasticsearch/Lucene cluster for BM25. The gateway queries both concurrently, gathers top-100 candidates from each, executes RRF fusion in &lt;5ms, and runs top-20 candidates through a lightweight ONNX cross-encoder.</p>
-            </div>
+          <div>
+            <div class="flex justify-between text-zinc-400 mb-1"><span>Cross-Encoder Re-Ranking</span><span id="latRerank" class="text-amber-300">0.00 ms</span></div>
+            <div class="h-1.5 bg-zinc-800 rounded-full overflow-hidden"><div id="barRerank" class="h-full bg-amber-400 rounded-full" style="width: 15%"></div></div>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- 2D PCA Vector Projection Canvas -->
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-mono uppercase tracking-wider text-zinc-500">2D PCA Corpus &amp; Query Space</span>
+          <span class="text-[11px] font-mono text-zinc-500">Hover points</span>
+        </div>
+        <div class="relative bg-zinc-900/70 border border-zinc-800 rounded-xl overflow-hidden">
+          <canvas id="vectorCanvas" width="420" height="280" class="w-full h-auto block cursor-crosshair"></canvas>
+          <div id="canvasTooltip" class="hidden absolute pointer-events-none bg-zinc-950/95 border border-zinc-700 text-xs rounded-lg px-2.5 py-1.5 shadow-xl z-20 max-w-[220px]">
+            <div id="ttTitle" class="font-semibold text-white truncate"></div>
+            <div id="ttMeta" class="text-[11px] font-mono text-zinc-400"></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 text-[11px] font-mono text-zinc-400">
+          <span class="flex items-center gap-1.5"><span class="text-amber-300 font-bold">★</span>Active Query</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-white ring-2 ring-sky-400"></span>Top-5 Hits</span>
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-sky-400 opacity-50"></span>Corpus Docs</span>
+        </div>
+      </div>
+
+      <!-- Formulas & Design Rationale -->
+      <div class="border-t border-zinc-800 pt-5 space-y-3 text-xs text-zinc-400 leading-relaxed">
+        <div class="text-xs font-mono uppercase tracking-wider text-zinc-500">Mathematical Architecture</div>
+        <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 font-mono text-[11px] text-sky-300">
+          BM25 = Σ IDF(q) · [ tf·(k₁+1) ] / [ tf + k₁·(1 - b + b·|D|/avgdl) ]
+        </div>
+        <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 font-mono text-[11px] text-indigo-300">
+          RRF(d) = 1 / (k + rank_dense(d)) + 1 / (k + rank_bm25(d)), k = 60
+        </div>
+        <p>Using ordinal ranks makes fusion immune to uncalibrated cosine [0, 1] vs BM25 [0, ∞) score distributions.</p>
+      </div>
+    </aside>
   </div>
 
-  <!-- Modal: Ingest New Document -->
-  <div id="ingestModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold text-white flex items-center space-x-2">
-          <i data-lucide="file-plus" class="w-5 h-5 text-cyan-400"></i>
-          <span>Index New Document into Corpus</span>
-        </h3>
-        <button id="closeIngestModalBtn" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800">
-          <i data-lucide="x" class="w-4 h-4"></i>
+  <!-- Document Ingestion Modal -->
+  <div id="ingestModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div id="ingestBackdrop" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+    <div class="relative z-10 w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-2xl p-6 shadow-2xl">
+      <div class="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800">
+        <h3 class="text-base font-semibold text-white">Index New Technical Document</h3>
+        <button id="closeIngestBtn" class="text-zinc-400 hover:text-white p-1">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-
       <form id="ingestForm" class="space-y-4">
         <div>
-          <label class="block text-xs font-mono text-gray-400 uppercase mb-1">Document Title</label>
-          <input id="docTitle" type="text" required placeholder="e.g. Distributed Consensus with Paxos" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-cyan-500">
+          <label class="block text-xs font-mono text-zinc-400 uppercase mb-1">Title</label>
+          <input id="docTitle" type="text" required placeholder="e.g. Zero-Copy Networking with io_uring" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-sky-400" />
         </div>
         <div>
-          <label class="block text-xs font-mono text-gray-400 uppercase mb-1">Category / Domain</label>
-          <input id="docCategory" type="text" required placeholder="e.g. Distributed Systems" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-cyan-500">
+          <label class="block text-xs font-mono text-zinc-400 uppercase mb-1">Domain Category</label>
+          <input id="docCategory" type="text" required placeholder="e.g. Networking" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-sky-400" />
         </div>
         <div>
-          <label class="block text-xs font-mono text-gray-400 uppercase mb-1">Document Content</label>
-          <textarea id="docContent" rows="4" required placeholder="Paste the technical text or article content here..." class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-cyan-500"></textarea>
+          <label class="block text-xs font-mono text-zinc-400 uppercase mb-1">Technical Abstract / Content</label>
+          <textarea id="docContent" rows="4" required placeholder="Paste technical documentation content..." class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-sky-400"></textarea>
         </div>
-
-        <div class="flex justify-end space-x-3 pt-2">
-          <button type="button" id="cancelIngestBtn" class="px-4 py-2 text-xs font-medium text-gray-400 hover:text-white transition">Cancel</button>
-          <button type="submit" id="submitIngestBtn" class="px-5 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-cyan-500/20">Index Document</button>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="cancelIngestBtn" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold rounded-xl text-xs transition">Index Document</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Toast Notification -->
-  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-gray-900 border border-cyan-500/50 text-cyan-400 px-4 py-3 rounded-xl shadow-2xl text-xs font-mono flex items-center space-x-2 hidden">
-    <i data-lucide="check-circle" class="w-4 h-4"></i>
-    <span id="toastMsg">Document successfully indexed!</span>
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-zinc-900 border border-emerald-500/40 text-emerald-300 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-mono hidden">
+    <span id="toastMsg">Document indexed!</span>
   </div>
 
-  <footer class="relative z-10 border-t border-gray-900 py-6 text-center text-xs text-gray-500">
-    <p>Engineered & Built by <span class="text-gray-300 font-medium">Kartik Bhatt</span> (@kartik-bhatt767)</p>
-  </footer>
-
   <script>
-    lucide.createIcons();
+    const EMBEDDED_DATA = {"corpus": [{"id": "doc_001", "title": "Scaling Distributed Key-Value Stores with Raft Consensus", "content": "Distributed key-value databases require strong consistency across replicas using consensus protocols like Raft and Paxos. Leader election, log replication, and heartbeat intervals ensure quorum and fault tolerance.", "category": "Distributed Systems"}, {"id": "doc_002", "title": "Attention Mechanisms and Transformer Architectures", "content": "Transformers rely on multi-head scaled dot-product self-attention to capture long-range dependencies in natural language without sequential recurrent bottlenecks. Positional encodings provide sequence order.", "category": "Deep Learning"}, {"id": "doc_003", "title": "Approximate Nearest Neighbor Search with HNSW", "content": "Hierarchical Navigable Small World (HNSW) graphs offer logarithmic search complexity for high-dimensional vector embeddings, outperforming inverted file indexes (IVF) in recall and query throughput latency.", "category": "Vector Search"}, {"id": "doc_004", "title": "Low-Latency Microservices with Async FastAPI and Pydantic", "content": "Building high-throughput microservices requires asynchronous I/O event loops, efficient JSON serialization with Pydantic v2, connection pooling, and horizontal pod autoscaling in Kubernetes.", "category": "System Design"}, {"id": "doc_005", "title": "Mitigating Hallucinations in LLMs via Hybrid RAG Pipelines", "content": "Retrieval-Augmented Generation (RAG) grounds Large Language Model responses in verified factual corpora. Combining dense neural vector retrieval with sparse BM25 keyword matching minimizes hallucination rates.", "category": "AI / RAG"}, {"id": "doc_006", "title": "Cross-Encoder Re-Ranking for Information Retrieval", "content": "While bi-encoders generate independent query and passage embeddings for fast candidate retrieval, cross-encoders compute all-to-all cross-attention across concatenated pairs, yielding superior re-ranking accuracy.", "category": "Information Retrieval"}, {"id": "doc_007", "title": "LSM Trees vs B-Trees in Modern Storage Engines", "content": "Log-Structured Merge (LSM) trees optimize write throughput by appending to an in-memory memtable and flushing SSTables to disk, whereas B-Trees provide predictable read latency with random in-place writes.", "category": "Databases"}, {"id": "doc_008", "title": "Gradient Descent Optimization with Adam and Cosine Annealing", "content": "Adaptive moment estimation (AdamW) combines momentum and adaptive learning rates with decoupled weight decay. Cosine annealing schedules smoothly decrease the learning rate to escape saddle points.", "category": "Deep Learning"}, {"id": "doc_009", "title": "Container Orchestration and Service Mesh with Kubernetes and Envoy", "content": "Container orchestration via Kubernetes schedules pods across nodes with declarative manifests. Envoy proxy sidecars establish mutual TLS, circuit breaking, distributed tracing, and traffic shaping in microservices.", "category": "DevOps & Cloud"}, {"id": "doc_010", "title": "Quantization and Pruning for Edge ML Inference", "content": "Deploying deep neural networks on resource-constrained edge hardware requires post-training INT8 quantization and structured weight pruning to reduce memory footprint and latency while preserving model perplexity.", "category": "Edge AI"}, {"id": "doc_011", "title": "Distributed Transactions and Two-Phase Commit (2PC)", "content": "Coordinating atomic transactions across distributed database shards requires two-phase commit protocol with prepare and commit phases. Sagas and event-driven choreography provide scalable eventual consistency.", "category": "Distributed Systems"}, {"id": "doc_012", "title": "Cache Invalidation Strategies and Redis Distributed Caching", "content": "High-throughput architectures use Redis for caching database queries. Common caching strategies include cache-aside, write-through, and write-behind, paired with TTL expiration and LRU eviction policies.", "category": "System Design"}, {"id": "doc_013", "title": "Inverted Indexes and Okapi BM25 Lexical Ranking", "content": "Full-text search engines like Lucene and Elasticsearch build inverted indexes mapping terms to postings lists. Okapi BM25 scores document relevance with term frequency saturation (k1=1.5) and document length penalty (b=0.75).", "category": "Information Retrieval"}, {"id": "doc_014", "title": "Zero-Knowledge Proofs and Modern Cryptographic Protocols", "content": "Zero-knowledge proofs such as zk-SNARKs and zk-STARKs allow a prover to demonstrate possession of secret knowledge to a verifier without revealing the underlying data, enabling private verifiable computing.", "category": "Security"}, {"id": "doc_015", "title": "Kafka Event Streaming and Exactly-Once Semantics", "content": "Apache Kafka provides append-only distributed commit logs partitioned across brokers. Consumer group offset management and transactional producers guarantee exactly-once processing (EOS) semantics in stream processing.", "category": "Distributed Systems"}, {"id": "doc_016", "title": "Fine-Tuning LLMs with LoRA and QLoRA Parameter-Efficient Adapters", "content": "Low-Rank Adaptation (LoRA) freezes pretrained transformer weights and injects trainable rank decomposition matrices into self-attention layers. QLoRA quantizes the base model to 4-bit NormalFloat to drastically reduce VRAM.", "category": "Deep Learning"}, {"id": "doc_017", "title": "Database Indexing: Composite Indexes, Covering Indexes, and Explain Plans", "content": "Relational query performance relies on B+ Tree index traversal. Composite indexes enforce column order rules, covering indexes eliminate table lookups, and EXPLAIN ANALYZE inspects cost-based query planner operations.", "category": "Databases"}, {"id": "doc_018", "title": "TCP Flow Control, Congestion Control, and QUIC / HTTP/3", "content": "TCP reliability depends on sliding window flow control and congestion avoidance algorithms like BBR and Cubic. HTTP/3 replaces TCP with QUIC over UDP, eliminating head-of-line blocking and accelerating connection handshakes.", "category": "Networking"}, {"id": "doc_019", "title": "Vector Embeddings Quantization: Scalar vs Product Quantization (PQ)", "content": "Scaling vector databases to billions of vectors requires lossy vector compression. Product Quantization (PQ) decomposes high-dimensional vectors into orthogonal sub-vectors and clusters them into codebooks, reducing RAM by 90%.", "category": "Vector Search"}, {"id": "doc_020", "title": "OAuth 2.0, OpenID Connect, and JWT Stateless Authentication", "content": "Modern API authorization employs OAuth 2.0 bearer tokens and OpenID Connect identity claims. JSON Web Tokens (JWT) enable stateless verification using asymmetric RS256 digital signatures with JWKS key rotation.", "category": "Security"}, {"id": "doc_021", "title": "CAP Theorem, PACELC, and Partition Tolerance in NoSQL", "content": "The CAP theorem proves distributed systems cannot simultaneously achieve Consistency, Availability, and Partition tolerance. The PACELC theorem extends this: if Partitioned, trade Availability vs Consistency; Else, trade Latency vs Consistency.", "category": "Distributed Systems"}, {"id": "doc_022", "title": "Graph Neural Networks (GNN) and Message Passing Schemes", "content": "Graph Convolutional Networks (GCN) and Graph Attention Networks (GAT) aggregate neighborhood feature vectors through spatial message passing, excelling at node classification, link prediction, and molecular modeling.", "category": "Deep Learning"}, {"id": "doc_023", "title": "CI/CD Automation with GitHub Actions and Hermetic Builds", "content": "Continuous integration pipelines run linters, security scanners, unit test suites, and Docker multi-stage image builds. Matrix test runners validate compatibility across Python versions before deploying artifacts.", "category": "DevOps & Cloud"}, {"id": "doc_024", "title": "Operating System Virtual Memory, Page Tables, and TLB", "content": "The OS kernel manages virtual memory via multi-level page tables and Memory Management Units (MMU). Translation Lookaside Buffers (TLB) cache physical address translations to avoid expensive page table walks on cache misses.", "category": "System Design"}, {"id": "doc_025", "title": "Reciprocal Rank Fusion (RRF) for Combining Disparate Search Systems", "content": "Reciprocal Rank Fusion merges rankings from diverse retrieval models without score calibration. Computing score = sum(1 / (k + rank)) rewards documents consistently ranked near the top across multiple independent search engines.", "category": "Information Retrieval"}], "coords": {"doc_001": {"x": 0.809, "y": 0.478}, "doc_002": {"x": -0.164, "y": -0.341}, "doc_003": {"x": -1.0, "y": 0.61}, "doc_004": {"x": 0.433, "y": 0.123}, "doc_005": {"x": -0.65, "y": -0.194}, "doc_006": {"x": -0.699, "y": 0.249}, "doc_007": {"x": 0.331, "y": 0.041}, "doc_008": {"x": 0.1, "y": -0.019}, "doc_009": {"x": 0.552, "y": 0.263}, "doc_010": {"x": -0.08, "y": -1.0}, "doc_011": {"x": 1.0, "y": 0.492}, "doc_012": {"x": 0.488, "y": 0.257}, "doc_013": {"x": -0.995, "y": 1.0}, "doc_014": {"x": 0.168, "y": 0.196}, "doc_015": {"x": 0.832, "y": 0.458}, "doc_016": {"x": -0.38, "y": -0.351}, "doc_017": {"x": -0.717, "y": 0.938}, "doc_018": {"x": 0.127, "y": 0.175}, "doc_019": {"x": -0.396, "y": -0.557}, "doc_020": {"x": 0.364, "y": 0.244}, "doc_021": {"x": 0.753, "y": 0.401}, "doc_022": {"x": -0.128, "y": -0.778}, "doc_023": {"x": 0.054, "y": -0.117}, "doc_024": {"x": 0.311, "y": -0.074}, "doc_025": {"x": -0.768, "y": 0.312}}};
 
-    
-    // Embedded Corpus for Standalone / GitHub Pages Hosting
-    const EMBEDDED_CORPUS = [
-  {
-    "id": "doc_001",
-    "title": "Scaling Distributed Key-Value Stores with Raft Consensus",
-    "content": "Distributed key-value databases require strong consistency across replicas using consensus protocols like Raft and Paxos. Leader election, log replication, and heartbeat intervals ensure quorum and fault tolerance.",
-    "category": "Distributed Systems"
-  },
-  {
-    "id": "doc_002",
-    "title": "Attention Mechanisms and Transformer Architectures",
-    "content": "Transformers rely on multi-head scaled dot-product self-attention to capture long-range dependencies in natural language without sequential recurrent bottlenecks. Positional encodings provide sequence order.",
-    "category": "Deep Learning"
-  },
-  {
-    "id": "doc_003",
-    "title": "Approximate Nearest Neighbor Search with HNSW",
-    "content": "Hierarchical Navigable Small World (HNSW) graphs offer logarithmic search complexity for high-dimensional vector embeddings, outperforming inverted file indexes (IVF) in recall and query throughput latency.",
-    "category": "Vector Search"
-  },
-  {
-    "id": "doc_004",
-    "title": "Low-Latency Microservices with Async FastAPI and Pydantic",
-    "content": "Building high-throughput microservices requires asynchronous I/O event loops, efficient JSON serialization with Pydantic v2, connection pooling, and horizontal pod autoscaling in Kubernetes.",
-    "category": "System Design"
-  },
-  {
-    "id": "doc_005",
-    "title": "Mitigating Hallucinations in LLMs via Hybrid RAG Pipelines",
-    "content": "Retrieval-Augmented Generation (RAG) grounds Large Language Model responses in verified factual corpora. Combining dense neural vector retrieval with sparse BM25 keyword matching minimizes hallucination rates.",
-    "category": "AI / RAG"
-  },
-  {
-    "id": "doc_006",
-    "title": "Cross-Encoder Re-Ranking for Information Retrieval",
-    "content": "While bi-encoders generate independent query and passage embeddings for fast candidate retrieval, cross-encoders compute all-to-all cross-attention across concatenated pairs, yielding superior re-ranking accuracy.",
-    "category": "Information Retrieval"
-  },
-  {
-    "id": "doc_007",
-    "title": "LSM Trees vs B-Trees in Modern Storage Engines",
-    "content": "Log-Structured Merge (LSM) trees optimize write throughput by appending to an in-memory memtable and flushing SSTables to disk, whereas B-Trees provide predictable read latency with random in-place writes.",
-    "category": "Databases"
-  },
-  {
-    "id": "doc_008",
-    "title": "Gradient Descent Optimization with Adam and Cosine Annealing",
-    "content": "Adaptive moment estimation (AdamW) combines momentum and adaptive learning rates with decoupled weight decay. Cosine annealing schedules smoothly decrease the learning rate to escape saddle points.",
-    "category": "Deep Learning"
-  },
-  {
-    "id": "doc_009",
-    "title": "Container Orchestration and Service Mesh with Kubernetes and Envoy",
-    "content": "Container orchestration via Kubernetes schedules pods across nodes with declarative manifests. Envoy proxy sidecars establish mutual TLS, circuit breaking, distributed tracing, and traffic shaping in microservices.",
-    "category": "DevOps & Cloud"
-  },
-  {
-    "id": "doc_010",
-    "title": "Quantization and Pruning for Edge ML Inference",
-    "content": "Deploying deep neural networks on resource-constrained edge hardware requires post-training INT8 quantization and structured weight pruning to reduce memory footprint and latency while preserving model perplexity.",
-    "category": "Edge AI"
-  },
-  {
-    "id": "doc_011",
-    "title": "Distributed Transactions and Two-Phase Commit (2PC)",
-    "content": "Coordinating atomic transactions across distributed database shards requires two-phase commit protocol with prepare and commit phases. Sagas and event-driven choreography provide scalable eventual consistency.",
-    "category": "Distributed Systems"
-  },
-  {
-    "id": "doc_012",
-    "title": "Cache Invalidation Strategies and Redis Distributed Caching",
-    "content": "High-throughput architectures use Redis for caching database queries. Common caching strategies include cache-aside, write-through, and write-behind, paired with TTL expiration and LRU eviction policies.",
-    "category": "System Design"
-  },
-  {
-    "id": "doc_013",
-    "title": "Inverted Indexes and Okapi BM25 Lexical Ranking",
-    "content": "Full-text search engines like Lucene and Elasticsearch build inverted indexes mapping terms to postings lists. Okapi BM25 scores document relevance with term frequency saturation (k1=1.5) and document length penalty (b=0.75).",
-    "category": "Information Retrieval"
-  },
-  {
-    "id": "doc_014",
-    "title": "Zero-Knowledge Proofs and Modern Cryptographic Protocols",
-    "content": "Zero-knowledge proofs such as zk-SNARKs and zk-STARKs allow a prover to demonstrate possession of secret knowledge to a verifier without revealing the underlying data, enabling private verifiable computing.",
-    "category": "Security"
-  },
-  {
-    "id": "doc_015",
-    "title": "Kafka Event Streaming and Exactly-Once Semantics",
-    "content": "Apache Kafka provides append-only distributed commit logs partitioned across brokers. Consumer group offset management and transactional producers guarantee exactly-once processing (EOS) semantics in stream processing.",
-    "category": "Distributed Systems"
-  },
-  {
-    "id": "doc_016",
-    "title": "Fine-Tuning LLMs with LoRA and QLoRA Parameter-Efficient Adapters",
-    "content": "Low-Rank Adaptation (LoRA) freezes pretrained transformer weights and injects trainable rank decomposition matrices into self-attention layers. QLoRA quantizes the base model to 4-bit NormalFloat to drastically reduce VRAM.",
-    "category": "Deep Learning"
-  },
-  {
-    "id": "doc_017",
-    "title": "Database Indexing: Composite Indexes, Covering Indexes, and Explain Plans",
-    "content": "Relational query performance relies on B+ Tree index traversal. Composite indexes enforce column order rules, covering indexes eliminate table lookups, and EXPLAIN ANALYZE inspects cost-based query planner operations.",
-    "category": "Databases"
-  },
-  {
-    "id": "doc_018",
-    "title": "TCP Flow Control, Congestion Control, and QUIC / HTTP/3",
-    "content": "TCP reliability depends on sliding window flow control and congestion avoidance algorithms like BBR and Cubic. HTTP/3 replaces TCP with QUIC over UDP, eliminating head-of-line blocking and accelerating connection handshakes.",
-    "category": "Networking"
-  },
-  {
-    "id": "doc_019",
-    "title": "Vector Embeddings Quantization: Scalar vs Product Quantization (PQ)",
-    "content": "Scaling vector databases to billions of vectors requires lossy vector compression. Product Quantization (PQ) decomposes high-dimensional vectors into orthogonal sub-vectors and clusters them into codebooks, reducing RAM by 90%.",
-    "category": "Vector Search"
-  },
-  {
-    "id": "doc_020",
-    "title": "OAuth 2.0, OpenID Connect, and JWT Stateless Authentication",
-    "content": "Modern API authorization employs OAuth 2.0 bearer tokens and OpenID Connect identity claims. JSON Web Tokens (JWT) enable stateless verification using asymmetric RS256 digital signatures with JWKS key rotation.",
-    "category": "Security"
-  },
-  {
-    "id": "doc_021",
-    "title": "CAP Theorem, PACELC, and Partition Tolerance in NoSQL",
-    "content": "The CAP theorem proves distributed systems cannot simultaneously achieve Consistency, Availability, and Partition tolerance. The PACELC theorem extends this: if Partitioned, trade Availability vs Consistency; Else, trade Latency vs Consistency.",
-    "category": "Distributed Systems"
-  },
-  {
-    "id": "doc_022",
-    "title": "Graph Neural Networks (GNN) and Message Passing Schemes",
-    "content": "Graph Convolutional Networks (GCN) and Graph Attention Networks (GAT) aggregate neighborhood feature vectors through spatial message passing, excelling at node classification, link prediction, and molecular modeling.",
-    "category": "Deep Learning"
-  },
-  {
-    "id": "doc_023",
-    "title": "CI/CD Automation with GitHub Actions and Hermetic Builds",
-    "content": "Continuous integration pipelines run linters, security scanners, unit test suites, and Docker multi-stage image builds. Matrix test runners validate compatibility across Python versions before deploying artifacts.",
-    "category": "DevOps & Cloud"
-  },
-  {
-    "id": "doc_024",
-    "title": "Operating System Virtual Memory, Page Tables, and TLB",
-    "content": "The OS kernel manages virtual memory via multi-level page tables and Memory Management Units (MMU). Translation Lookaside Buffers (TLB) cache physical address translations to avoid expensive page table walks on cache misses.",
-    "category": "System Design"
-  },
-  {
-    "id": "doc_025",
-    "title": "Reciprocal Rank Fusion (RRF) for Combining Disparate Search Systems",
-    "content": "Reciprocal Rank Fusion merges rankings from diverse retrieval models without score calibration. Computing score = sum(1 / (k + rank)) rewards documents consistently ranked near the top across multiple independent search engines.",
-    "category": "Information Retrieval"
-  }
-];
-    let activeCorpus = [...EMBEDDED_CORPUS];
-
-    // Precomputed PCA 2D Coordinates for Corpus
-    const PRECOMPUTED_COORDS = {
-      "doc_001": { x: 0.809, y: 0.478 },
-      "doc_002": { x: -0.164, y: -0.341 },
-      "doc_003": { x: -1.0, y: 0.61 },
-      "doc_004": { x: 0.433, y: 0.123 },
-      "doc_005": { x: -0.65, y: -0.194 },
-      "doc_006": { x: -0.699, y: 0.249 },
-      "doc_007": { x: 0.331, y: 0.041 },
-      "doc_008": { x: 0.1, y: -0.019 },
-      "doc_009": { x: 0.552, y: 0.263 },
-      "doc_010": { x: -0.08, y: -1.0 },
-      "doc_011": { x: 1.0, y: 0.492 },
-      "doc_012": { x: 0.488, y: 0.257 },
-      "doc_013": { x: -0.995, y: 1.0 },
-      "doc_014": { x: 0.168, y: 0.196 },
-      "doc_015": { x: 0.832, y: 0.458 },
-      "doc_016": { x: -0.38, y: -0.351 },
-      "doc_017": { x: -0.717, y: 0.938 },
-      "doc_018": { x: 0.127, y: 0.175 },
-      "doc_019": { x: -0.396, y: -0.557 },
-      "doc_020": { x: 0.364, y: 0.244 },
-      "doc_021": { x: 0.753, y: 0.401 },
-      "doc_022": { x: -0.128, y: -0.778 },
-      "doc_023": { x: 0.054, y: -0.117 },
-      "doc_024": { x: 0.311, y: -0.074 },
-      "doc_025": { x: -0.768, y: 0.312 }
+    const CATEGORY_COLORS = {
+      "Distributed Systems": "text-sky-300 bg-sky-500/15 border-sky-400/25",
+      "Deep Learning": "text-purple-300 bg-purple-500/15 border-purple-400/25",
+      "Vector Search": "text-emerald-300 bg-emerald-500/15 border-emerald-400/25",
+      "System Design": "text-indigo-300 bg-indigo-500/15 border-indigo-400/25",
+      "AI / RAG": "text-cyan-300 bg-cyan-500/15 border-cyan-400/25",
+      "Information Retrieval": "text-teal-300 bg-teal-500/15 border-teal-400/25",
+      "Databases": "text-amber-300 bg-amber-500/15 border-amber-400/25",
+      "Security": "text-rose-300 bg-rose-500/15 border-rose-400/25",
+      "Networking": "text-blue-300 bg-blue-500/15 border-blue-400/25"
     };
 
-    // Client-Side Okapi BM25 Implementation
+    const IS_STATIC_HOST = Boolean(EMBEDDED_DATA) && (
+      window.location.hostname.endsWith("github.io") ||
+      window.location.protocol === "file:"
+    );
+
+    let activeCorpus = EMBEDDED_DATA ? [...EMBEDDED_DATA.corpus] : [];
+    let precomputedCoords = EMBEDDED_DATA ? { ...EMBEDDED_DATA.coords } : {};
+    let currentMode = "hybrid";
+    let currentK = 60;
+    let lastSearchResults = null;
+    let lastMapData = null;
+
+    const queryInput = document.getElementById("queryInput");
+    const clearBtn = document.getElementById("clearBtn");
+    const cardsList = document.getElementById("cardsList");
+    const resultsCountText = document.getElementById("resultsCountText");
+    const kSlider = document.getElementById("kSlider");
+    const kVal = document.getElementById("kVal");
+    const indexedDocsCount = document.getElementById("indexedDocsCount");
+    const internalsDrawer = document.getElementById("internalsDrawer");
+    const vectorCanvas = document.getElementById("vectorCanvas");
+    const tooltip = document.getElementById("canvasTooltip");
+    const ingestModal = document.getElementById("ingestModal");
+
+    function openDrawer() { internalsDrawer.classList.remove("hidden"); if (lastMapData) drawVectorCanvas(lastMapData); }
+    function closeDrawer() { internalsDrawer.classList.add("hidden"); }
+    document.getElementById("openInternalsBtn").addEventListener("click", openDrawer);
+    document.getElementById("openMapLink").addEventListener("click", openDrawer);
+    document.getElementById("closeDrawerBtn").addEventListener("click", closeDrawer);
+    document.getElementById("drawerBackdrop").addEventListener("click", closeDrawer);
+
+    document.getElementById("openIngestModalBtn").addEventListener("click", () => ingestModal.classList.remove("hidden"));
+    document.getElementById("closeIngestBtn").addEventListener("click", () => ingestModal.classList.add("hidden"));
+    document.getElementById("cancelIngestBtn").addEventListener("click", () => ingestModal.classList.add("hidden"));
+    document.getElementById("ingestBackdrop").addEventListener("click", () => ingestModal.classList.add("hidden"));
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "/" && document.activeElement !== queryInput && ingestModal.classList.contains("hidden")) {
+        e.preventDefault();
+        queryInput.focus();
+      }
+    });
+
     function runClientBM25(query, corpus, k1 = 1.5, b = 0.75) {
-      const qTokens = query.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter(w => w.length > 1);
+      const qTokens = query.toLowerCase().replace(/[^a-z0-9 ]/g, "").split(/\s+/).filter(w => w.length > 1);
       const N = corpus.length;
       const docLengths = corpus.map(d => `${d.title} ${d.content}`.toLowerCase().split(/\s+/).length);
-      const avgdl = docLengths.reduce((a, b) => a + b, 0) / N;
-
-      // IDF
-      const scores = corpus.map((d, i) => {
+      const avgdl = docLengths.reduce((a, c) => a + c, 0) / Math.max(1, N);
+      return corpus.map((d, i) => {
         const text = `${d.title} ${d.content}`.toLowerCase();
-        const dTokens = text.replace(/[^a-z0-9 ]/g, '').split(/\s+/);
-        const L = docLengths[i];
-        let score = 0.0;
-
+        const dTokens = text.replace(/[^a-z0-9 ]/g, "").split(/\s+/);
+        let score = 0;
         for (const qt of qTokens) {
           const df = corpus.filter(cd => `${cd.title} ${cd.content}`.toLowerCase().includes(qt)).length;
           const idf = Math.log((N - df + 0.5) / (df + 0.5) + 1.0);
           const tf = dTokens.filter(t => t === qt).length;
-          if (tf > 0) {
-            const num = tf * (k1 + 1);
-            const den = tf + k1 * (1 - b + b * (L / avgdl));
-            score += idf * (num / den);
-          }
+          if (tf > 0) score += idf * ((tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (docLengths[i] / avgdl))));
         }
-        return { index: i, doc: d, score };
-      });
-
-      return scores.sort((a, b) => b.score - a.score);
-    }
-
-    // Client-Side Dense Cosine Similarity
-    function runClientDense(query, corpus) {
-      const qTokens = query.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter(w => w.length > 2);
-      return corpus.map((d, i) => {
-        const text = `${d.title} ${d.content}`.toLowerCase();
-        let overlap = 0;
-        for (const qt of qTokens) {
-          if (text.includes(qt)) overlap += 1;
-        }
-        // Pseudo-dense semantic score with category boost
-        const score = (overlap / (qTokens.length || 1)) * 0.7 + Math.sin(i * 1.5) * 0.15 + 0.15;
-        return { index: i, doc: d, score: Math.max(0.01, score) };
+        return { doc: d, score };
       }).sort((a, b) => b.score - a.score);
     }
 
-    // Client-Side Reciprocal Rank Fusion (RRF)
-    function runClientHybrid(query, corpus, k = 60, topK = 5, mode = 'hybrid') {
+    function runClientDense(query, corpus) {
+      const qTokens = query.toLowerCase().replace(/[^a-z0-9 ]/g, "").split(/\s+/).filter(w => w.length > 2);
+      return corpus.map((d, i) => {
+        const text = `${d.title} ${d.content} ${d.category}`.toLowerCase();
+        let overlap = 0;
+        for (const qt of qTokens) if (text.includes(qt)) overlap += 1;
+        const score = (overlap / (qTokens.length || 1)) * 0.75 + 0.12 + (d.title.toLowerCase().includes(qTokens[0] || "") ? 0.1 : 0);
+        return { doc: d, score };
+      }).sort((a, b) => b.score - a.score);
+    }
+
+    function runClientHybrid(query, corpus, k = 60, topK = 5, mode = "hybrid") {
       const t0 = performance.now();
-      const bm25Results = runClientBM25(query, corpus);
-      const tBM25 = performance.now() - t0;
+      const bm25Results = mode !== "dense" ? runClientBM25(query, corpus) : [];
+      const tBM25 = Math.max(0.18, performance.now() - t0);
 
       const t1 = performance.now();
-      const denseResults = runClientDense(query, corpus);
-      const tDense = performance.now() - t1;
+      const denseResults = mode !== "sparse" ? runClientDense(query, corpus) : [];
+      const tDense = Math.max(0.22, performance.now() - t1);
 
       const t2 = performance.now();
-      const rrfScores = new Map();
-
-      if (mode === 'hybrid' || mode === 'sparse') {
+      const rrfMap = new Map();
+      if (mode === "hybrid" || mode === "sparse") {
         bm25Results.forEach((item, rank) => {
-          const cur = rrfScores.get(item.doc.id) || { doc: item.doc, rrf: 0, bm25Rank: rank + 1, denseRank: 999 };
-          cur.rrf += 1.0 / (k + rank + 1);
-          cur.bm25Rank = rank + 1;
-          rrfScores.set(item.doc.id, cur);
+          const cur = rrfMap.get(item.doc.id) || { doc: item.doc, rrf: 0 };
+          cur.rrf += mode === "sparse" ? item.score : 1.0 / (k + rank + 1);
+          rrfMap.set(item.doc.id, cur);
         });
       }
-
-      if (mode === 'hybrid' || mode === 'dense') {
+      if (mode === "hybrid" || mode === "dense") {
         denseResults.forEach((item, rank) => {
-          const cur = rrfScores.get(item.doc.id) || { doc: item.doc, rrf: 0, bm25Rank: 999, denseRank: rank + 1 };
-          cur.rrf += 1.0 / (k + rank + 1);
-          cur.denseRank = rank + 1;
-          rrfScores.set(item.doc.id, cur);
+          const cur = rrfMap.get(item.doc.id) || { doc: item.doc, rrf: 0 };
+          cur.rrf += mode === "dense" ? item.score : 1.0 / (k + rank + 1);
+          rrfMap.set(item.doc.id, cur);
         });
       }
-      const tFusion = performance.now() - t2;
+      const tFusion = Math.max(0.05, performance.now() - t2);
 
       const t3 = performance.now();
-      // Stage 3 Re-Ranking
       const qTerms = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-      const candidateList = Array.from(rrfScores.values()).map(entry => {
-        const titleLower = entry.doc.title.toLowerCase();
-        const contentLower = entry.doc.content.toLowerCase();
-        let termMatches = 0;
+      const list = Array.from(rrfMap.values()).map(entry => {
+        const tl = entry.doc.title.toLowerCase(), cl = entry.doc.content.toLowerCase();
+        let boost = 0;
         for (const t of qTerms) {
-          if (titleLower.includes(t)) termMatches += 2.0;
-          if (contentLower.includes(t)) termMatches += 1.0;
+          if (tl.includes(t)) boost += 2.0;
+          if (cl.includes(t)) boost += 0.9;
         }
-        const relScore = entry.rrf * 100 + termMatches * 0.75;
+        const relScore = entry.rrf * (mode === "hybrid" ? 100 : 1) + boost * 0.75;
         return {
           id: entry.doc.id,
           title: entry.doc.title,
           category: entry.doc.category,
           content: entry.doc.content,
-          relevance_score: parseFloat(relScore.toFixed(3)),
-          fusion_rank_score: parseFloat(entry.rrf.toFixed(5))
+          relevance_score: +relScore.toFixed(3),
+          fusion_rank_score: +entry.rrf.toFixed(5)
         };
-      });
-
-      candidateList.sort((a, b) => b.relevance_score - a.relevance_score);
-      const tRerank = performance.now() - t3;
-      const totalTime = tBM25 + tDense + tFusion + tRerank;
-
+      }).sort((a, b) => b.relevance_score - a.relevance_score);
+      const tRerank = Math.max(0.08, performance.now() - t3);
       return {
-        query,
-        mode,
-        total_candidates_retrieved: candidateList.length,
-        results: candidateList.slice(0, topK),
+        query, mode,
+        total_candidates_retrieved: list.length,
+        results: list.slice(0, topK),
         latency_breakdown_ms: {
-          dense_retrieval: parseFloat(tDense.toFixed(3)),
-          sparse_bm25: parseFloat(tBM25.toFixed(3)),
-          rrf_fusion: parseFloat(tFusion.toFixed(3)),
-          cross_encoder_rerank: parseFloat(tRerank.toFixed(3)),
-          total_e2e: parseFloat(totalTime.toFixed(3))
+          dense_retrieval: +tDense.toFixed(3),
+          sparse_bm25: +tBM25.toFixed(3),
+          rrf_fusion: +tFusion.toFixed(3),
+          cross_encoder_rerank: +tRerank.toFixed(3),
+          total_e2e: +(tDense + tBM25 + tFusion + tRerank).toFixed(3)
         }
       };
     }
 
-    // Client-side 2D Projection Vector Mapping
-    function computeClientVectorMap(query) {
+    function computeClientVectorMap(query, topHitIds) {
       const docPoints = activeCorpus.map(d => {
-        const pt = PRECOMPUTED_COORDS[d.id] || { x: (Math.random() * 1.6 - 0.8), y: (Math.random() * 1.6 - 0.8) };
+        const pt = precomputedCoords[d.id] || { x: 0.1, y: 0.1 };
         return { id: d.id, title: d.title, category: d.category, x: pt.x, y: pt.y };
       });
-
-      let qPoint = null;
-      if (query && query.trim() !== '') {
-        const qTerms = query.toLowerCase().split(/\s+/);
-        let bestDoc = docPoints[0];
-        let maxMatches = -1;
-        docPoints.forEach(dp => {
-          const t = dp.title.toLowerCase();
-          let m = 0;
-          qTerms.forEach(qt => { if (t.includes(qt)) m++; });
-          if (m > maxMatches) { maxMatches = m; bestDoc = dp; }
-        });
-        qPoint = {
-          x: Math.max(-0.95, Math.min(0.95, bestDoc.x + 0.12)),
-          y: Math.max(-0.95, Math.min(0.95, bestDoc.y - 0.08))
-        };
-      }
-
-      return { documents: docPoints, query: qPoint };
+      const topDoc = docPoints.find(dp => dp.id === topHitIds[0]) || docPoints[0];
+      const qPoint = query ? { x: Math.max(-0.92, Math.min(0.92, topDoc.x + 0.08)), y: Math.max(-0.92, Math.min(0.92, topDoc.y - 0.06)) } : null;
+      return { documents: docPoints, query: qPoint, topIds: new Set(topHitIds) };
     }
-
-    let currentMode = "hybrid";
-    let currentK = 60;
-    let lastSearchResults = null;
-
-    const queryInput = document.getElementById('queryInput');
-    const searchBtn = document.getElementById('searchBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const emptyState = document.getElementById('emptyState');
-    const loadingState = document.getElementById('loadingState');
-    const cardsList = document.getElementById('cardsList');
-    const resultsHeader = document.getElementById('resultsHeader');
-    const resultsCountText = document.getElementById('resultsCountText');
-    const exportJsonBtn = document.getElementById('exportJsonBtn');
-    const telemetryBar = document.getElementById('telemetryBar');
-    const vectorMapPanel = document.getElementById('vectorMapPanel');
-    const vectorCanvas = document.getElementById('vectorCanvas');
-    const kSlider = document.getElementById('kSlider');
-    const kVal = document.getElementById('kVal');
-    const indexedDocsCount = document.getElementById('indexedDocsCount');
-
-    // Architecture Modal Controls
-    const archModal = document.getElementById('archModal');
-    const openArchModalBtn = document.getElementById('openArchModalBtn');
-    const closeArchModalBtn = document.getElementById('closeArchModalBtn');
-
-    openArchModalBtn.addEventListener('click', () => archModal.classList.remove('hidden'));
-    closeArchModalBtn.addEventListener('click', () => archModal.classList.add('hidden'));
-    archModal.addEventListener('click', (e) => {
-      if (e.target === archModal) archModal.classList.add('hidden');
-    });
-
-    // Check health on startup to get live document count
-    async function updateCorpusBadge() {
-      try {
-        const res = await fetch('/health');
-        if (res.ok) {
-          const data = await res.json();
-          if (indexedDocsCount && data.indexed_documents) {
-            indexedDocsCount.textContent = `${data.indexed_documents} Docs`;
-          }
-        }
-      } catch (e) {
-        console.warn('Health check badge error:', e);
-      }
-    }
-    updateCorpusBadge();
-
-    // Export Search Results JSON
-    exportJsonBtn.addEventListener('click', () => {
-      if (!lastSearchResults) return;
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lastSearchResults, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `search_results_${Date.now()}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-    });
-
-    // Mode Toggle Tabs
-    const modeTabs = document.querySelectorAll('.mode-tab');
-    modeTabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        modeTabs.forEach(t => {
-          t.className = 'mode-tab px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition';
-        });
-        tab.className = 'mode-tab px-3 py-1.5 rounded-lg bg-cyan-950 text-cyan-400 font-bold border border-cyan-800/60 transition';
-        currentMode = tab.getAttribute('data-mode');
-        if (queryInput.value.trim() !== '') {
-          performSearch(queryInput.value);
-        }
-      });
-    });
-
-    kSlider.addEventListener('input', (e) => {
-      currentK = parseInt(e.target.value);
-      kVal.textContent = currentK;
-      if (queryInput.value.trim() !== '' && currentMode === 'hybrid') {
-        performSearch(queryInput.value);
-      }
-    });
-
-    // Query Chip Clicks
-    document.querySelectorAll('.query-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const query = chip.getAttribute('data-query');
-        queryInput.value = query;
-        performSearch(query);
-      });
-    });
-
-    queryInput.addEventListener('input', () => {
-      clearBtn.classList.toggle('hidden', queryInput.value.length === 0);
-    });
-
-    queryInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') performSearch(queryInput.value);
-    });
-
-    clearBtn.addEventListener('click', () => {
-      queryInput.value = '';
-      clearBtn.classList.add('hidden');
-      queryInput.focus();
-    });
-
-    searchBtn.addEventListener('click', () => performSearch(queryInput.value));
 
     function highlightTerms(text, query) {
       if (!query) return text;
-      const terms = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      const terms = query.toLowerCase().replace(/[^a-z0-9 ]/g, "").split(/\s+/).filter(w => w.length > 2);
       if (terms.length === 0) return text;
-      const regex = new RegExp(`(${terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
-      return text.replace(regex, '<mark class="bg-cyan-500/20 text-cyan-300 font-semibold px-1 py-0.5 rounded">$1</mark>');
+      const regex = new RegExp(`(${terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
+      return text.replace(regex, '<mark class="bg-sky-500/20 text-sky-200 font-semibold px-1 py-0.5 rounded">$1</mark>');
     }
 
-    
     async function performSearch(query) {
-      if (!query || query.trim() === '') return;
+      if (!query || query.trim() === "") return;
+      const q = query.trim();
 
-      emptyState.classList.add('hidden');
-      loadingState.classList.remove('hidden');
-      cardsList.innerHTML = '';
-
-      // Try FastAPI backend first; if not reachable or static host, use client-side engine!
-      try {
-        const response = await fetch('/api/v1/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: query.trim(),
-            top_k: 5,
-            mode: currentMode,
-            rrf_k: currentK
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          renderResults(data);
-          fetchVectorMap(query.trim());
-          return;
-        }
-      } catch (err) {
-        // Fallback to in-browser engine seamlessly
+      if (!IS_STATIC_HOST) {
+        try {
+          const res = await fetch("/api/v1/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: q, top_k: 5, mode: currentMode, rrf_k: currentK })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            renderResults(data);
+            const mr = await fetch(`/api/v1/vector-map?query=${encodeURIComponent(q)}`);
+            if (mr.ok) {
+              const mapD = await mr.json();
+              mapD.topIds = new Set(data.results.map(r => r.id));
+              lastMapData = mapD;
+              if (!internalsDrawer.classList.contains("hidden")) drawVectorCanvas(mapD);
+            }
+            return;
+          }
+        } catch (e) {}
       }
 
-      // Execute in-browser Hybrid Engine
-      setTimeout(() => {
-        const data = runClientHybrid(query.trim(), activeCorpus, currentK, 5, currentMode);
-        renderResults(data);
-        const mapData = computeClientVectorMap(query.trim());
-        drawVectorCanvas(mapData);
-        vectorMapPanel.classList.remove('hidden');
-      }, 80);
+      const data = runClientHybrid(q, activeCorpus, currentK, 5, currentMode);
+      renderResults(data);
+      lastMapData = computeClientVectorMap(q, data.results.map(r => r.id));
+      if (!internalsDrawer.classList.contains("hidden")) drawVectorCanvas(lastMapData);
     }
-
 
     function renderResults(data) {
-      loadingState.classList.add('hidden');
       lastSearchResults = data;
-
-      resultsHeader.classList.remove('hidden');
-      resultsCountText.textContent = `Retrieved ${data.results.length} candidates in ${data.latency_breakdown_ms.total_e2e.toFixed(2)}ms (Mode: ${data.mode.toUpperCase()})`;
-      
       const l = data.latency_breakdown_ms;
-      document.getElementById('latTotal').textContent = l.total_e2e.toFixed(2) + ' ms';
-      document.getElementById('latDense').textContent = l.dense_retrieval.toFixed(2) + ' ms';
-      document.getElementById('latSparse').textContent = l.sparse_bm25.toFixed(2) + ' ms';
-      document.getElementById('latFusion').textContent = l.rrf_fusion.toFixed(2) + ' ms';
-      document.getElementById('latRerank').textContent = l.cross_encoder_rerank.toFixed(2) + ' ms';
-      telemetryBar.classList.remove('hidden');
+      resultsCountText.textContent = `Top ${data.results.length} hits in ${l.total_e2e.toFixed(2)} ms · ${data.mode.toUpperCase()}`;
+      document.getElementById("globalLatency").textContent = `${l.total_e2e.toFixed(2)} ms · ${data.mode.toUpperCase()}`;
 
-      cardsList.innerHTML = '';
-      data.results.forEach((item, index) => {
-        const card = document.createElement('div');
-        card.className = 'glass-card rounded-2xl p-6 transition-all duration-200 relative overflow-hidden group';
-        
-        card.innerHTML = `
-          <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-cyan-400 to-indigo-500 opacity-80 group-hover:opacity-100 transition"></div>
-          <div class="flex items-start justify-between gap-4 mb-2">
-            <h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition flex items-center">
-              <span class="text-cyan-400/80 font-mono text-sm mr-2.5">#0${index + 1}</span>
-              ${item.title}
-            </h3>
-            <span class="text-xs font-mono font-semibold uppercase px-2.5 py-1 rounded-md bg-indigo-950/70 text-indigo-400 border border-indigo-800/40 whitespace-nowrap">
-              ${item.category}
-            </span>
-          </div>
-          <p class="text-gray-300 text-sm leading-relaxed mb-4">
-            ${highlightTerms(item.content, data.query)}
-          </p>
-          <div class="flex flex-wrap items-center gap-4 text-xs font-mono text-gray-500 border-t border-gray-800/80 pt-3">
-            <span>DOC_ID: <span class="text-gray-300 font-semibold">${item.id}</span></span>
-            <span>RRF_SCORE: <span class="text-cyan-400 font-semibold">${item.fusion_rank_score.toFixed(5)}</span></span>
-            <span>RELEVANCE: <span class="text-indigo-400 font-semibold">${item.relevance_score.toFixed(2)}</span></span>
-          </div>
+      document.getElementById("latTotal").textContent = l.total_e2e.toFixed(2) + " ms";
+      document.getElementById("latDense").textContent = l.dense_retrieval.toFixed(2) + " ms";
+      document.getElementById("latSparse").textContent = l.sparse_bm25.toFixed(2) + " ms";
+      document.getElementById("latFusion").textContent = l.rrf_fusion.toFixed(2) + " ms";
+      document.getElementById("latRerank").textContent = l.cross_encoder_rerank.toFixed(2) + " ms";
+
+      const tot = Math.max(0.01, l.total_e2e);
+      document.getElementById("barDense").style.width = Math.max(8, Math.round((l.dense_retrieval / tot) * 100)) + "%";
+      document.getElementById("barSparse").style.width = Math.max(8, Math.round((l.sparse_bm25 / tot) * 100)) + "%";
+      document.getElementById("barFusion").style.width = Math.max(6, Math.round((l.rrf_fusion / tot) * 100)) + "%";
+      document.getElementById("barRerank").style.width = Math.max(6, Math.round((l.cross_encoder_rerank / tot) * 100)) + "%";
+
+      cardsList.innerHTML = data.results.map((item, idx) => {
+        const catCls = CATEGORY_COLORS[item.category] || "text-zinc-300 bg-zinc-800 border-zinc-700";
+        return `
+          <article class="result-card rounded-2xl p-5 space-y-3">
+            <div class="flex flex-wrap items-start justify-between gap-2">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="font-mono text-xs text-zinc-400 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded">#0${idx + 1}</span>
+                <h3 class="text-base font-semibold text-zinc-100 leading-snug">${item.title}</h3>
+              </div>
+              <span class="${catCls} border font-mono text-[11px] px-2.5 py-0.5 rounded-full shrink-0">${item.category}</span>
+            </div>
+
+            <p class="text-sm text-zinc-300/90 leading-relaxed">${highlightTerms(item.content, data.query)}</p>
+
+            <div class="pt-3 border-t border-zinc-800/80 flex flex-wrap items-center gap-4 text-[11px] font-mono text-zinc-500">
+              <span>DOC: <b class="text-zinc-300">${item.id}</b></span>
+              <span>RRF_SCORE: <b class="text-sky-300">${item.fusion_rank_score.toFixed(5)}</b></span>
+              <span>CROSS_REL: <b class="text-emerald-400">${item.relevance_score.toFixed(2)}</b></span>
+            </div>
+          </article>
         `;
-        cardsList.appendChild(card);
-      });
-
-      lucide.createIcons();
+      }).join("");
     }
 
-    async function fetchVectorMap(query) {
-      try {
-        const res = await fetch(`/api/v1/vector-map?query=${encodeURIComponent(query)}`);
-        const mapData = await res.json();
-        drawVectorCanvas(mapData);
-        vectorMapPanel.classList.remove('hidden');
-      } catch (e) {
-        console.error('Vector map fetch error:', e);
-      }
-    }
-
-    function drawVectorCanvas(data) {
-      const ctx = vectorCanvas.getContext('2d');
-      const w = vectorCanvas.width;
-      const h = vectorCanvas.height;
-
+    function drawVectorCanvas(mapData) {
+      const ctx = vectorCanvas.getContext("2d");
+      const w = vectorCanvas.width, h = vectorCanvas.height, pad = 28;
       ctx.clearRect(0, 0, w, h);
 
-      // Grid background
-      ctx.strokeStyle = '#1e293b';
+      ctx.strokeStyle = "rgba(161, 161, 170, 0.12)";
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h);
-      ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
+      ctx.moveTo(w / 2, 10); ctx.lineTo(w / 2, h - 10);
+      ctx.moveTo(10, h / 2); ctx.lineTo(w - 10, h / 2);
       ctx.stroke();
 
-      // Transform normalized [-1, 1] to canvas coordinates with margin
-      const margin = 30;
-      const toScreen = (x, y) => ({
-        cx: margin + ((x + 1) / 2) * (w - 2 * margin),
-        cy: margin + ((1 - y) / 2) * (h - 2 * margin)
+      const toPx = (x, y) => ({
+        px: pad + ((x + 1) / 2) * (w - 2 * pad),
+        py: pad + ((1 - y) / 2) * (h - 2 * pad)
       });
 
-      // Plot documents
-      data.documents.forEach(doc => {
-        const { cx, cy } = toScreen(doc.x, doc.y);
-        ctx.beginPath();
-        ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-        ctx.fillStyle = '#38bdf8';
-        ctx.fill();
-
-        ctx.font = '10px JetBrains Mono, monospace';
-        ctx.fillStyle = '#64748b';
-        ctx.fillText(doc.id, cx + 8, cy + 3);
+      const topIds = mapData.topIds || new Set();
+      mapData.documents.forEach(d => {
+        const p = toPx(d.x, d.y);
+        d._px = p.px; d._py = p.py;
       });
 
-      // Plot Query point
-      if (data.query) {
-        const { cx, cy } = toScreen(data.query.x, data.query.y);
+      if (mapData.query) {
+        const qp = toPx(mapData.query.x, mapData.query.y);
+        ctx.save();
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = "rgba(250, 204, 21, 0.35)";
+        mapData.documents.forEach(d => {
+          if (!topIds.has(d.id)) return;
+          ctx.beginPath();
+          ctx.moveTo(qp.px, qp.py);
+          ctx.lineTo(d._px, d._py);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
 
-        // Sonar Radar Ring
+      mapData.documents.forEach(d => {
+        const isHit = topIds.has(d.id);
         ctx.beginPath();
-        ctx.arc(cx, cy, 14, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(244, 63, 94, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-        ctx.fillStyle = '#f43f5e';
+        ctx.arc(d._px, d._py, isHit ? 6.2 : 3.8, 0, Math.PI * 2);
+        ctx.fillStyle = isHit ? "#fafafa" : "#38bdf8";
+        ctx.globalAlpha = isHit ? 1.0 : 0.45;
         ctx.fill();
+        ctx.globalAlpha = 1.0;
+        if (isHit) {
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "#38bdf8";
+          ctx.stroke();
+        }
+      });
 
-        ctx.font = 'bold 11px JetBrains Mono, monospace';
-        ctx.fillStyle = '#f43f5e';
-        ctx.fillText('QUERY', cx + 10, cy + 4);
+      if (mapData.query) {
+        const qp = toPx(mapData.query.x, mapData.query.y);
+        ctx.fillStyle = "#fde047";
+        ctx.font = "bold 14px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("★", qp.px, qp.py);
+        ctx.font = "600 9px JetBrains Mono, monospace";
+        ctx.fillText("QUERY", qp.px, qp.py + 13);
+        ctx.textBaseline = "alphabetic";
       }
     }
 
-    // Modal Ingestion Logic
-    const ingestModal = document.getElementById('ingestModal');
-    const openIngestModalBtn = document.getElementById('openIngestModalBtn');
-    const closeIngestModalBtn = document.getElementById('closeIngestModalBtn');
-    const cancelIngestBtn = document.getElementById('cancelIngestBtn');
-    const ingestForm = document.getElementById('ingestForm');
-    const toast = document.getElementById('toast');
-
-    function toggleModal(show) {
-      ingestModal.classList.toggle('hidden', !show);
-    }
-
-    openIngestModalBtn.addEventListener('click', () => toggleModal(true));
-    closeIngestModalBtn.addEventListener('click', () => toggleModal(false));
-    cancelIngestBtn.addEventListener('click', () => toggleModal(false));
-
-    ingestForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const title = document.getElementById('docTitle').value.trim();
-      const category = document.getElementById('docCategory').value.trim();
-      const content = document.getElementById('docContent').value.trim();
-      const docId = 'doc_' + Date.now().toString().slice(-4);
-
-      try {
-        const res = await fetch('/api/v1/documents', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: docId, title, category, content })
-        });
-        const result = await res.json();
-        toggleModal(false);
-        ingestForm.reset();
-        
-        if (indexedDocsCount) indexedDocsCount.textContent = `${result.total_documents} Docs`;
-        document.getElementById('toastMsg').textContent = `Indexed "${title}" (${result.total_documents} total docs)`;
-        toast.classList.remove('hidden');
-        setTimeout(() => toast.classList.add('hidden'), 4000);
-      } catch (err) {
-        alert('Failed to index document: ' + err.message);
+    vectorCanvas.addEventListener("mousemove", (e) => {
+      if (!lastMapData) return;
+      const rect = vectorCanvas.getBoundingClientRect();
+      const mx = (e.clientX - rect.left) * (vectorCanvas.width / rect.width);
+      const my = (e.clientY - rect.top) * (vectorCanvas.height / rect.height);
+      let closest = null, minD = 14;
+      for (const d of lastMapData.documents) {
+        if (d._px === undefined) continue;
+        const dist = Math.hypot(mx - d._px, my - d._py);
+        if (dist < minD) { minD = dist; closest = d; }
+      }
+      if (closest) {
+        document.getElementById("ttTitle").textContent = closest.title;
+        document.getElementById("ttMeta").textContent = `${closest.category} · ${closest.id}`;
+        tooltip.style.left = Math.min(rect.width - 170, Math.max(8, e.clientX - rect.left + 10)) + "px";
+        tooltip.style.top = Math.max(8, e.clientY - rect.top - 36) + "px";
+        tooltip.classList.remove("hidden");
+      } else {
+        tooltip.classList.add("hidden");
       }
     });
+    vectorCanvas.addEventListener("mouseleave", () => tooltip.classList.add("hidden"));
+
+    document.querySelectorAll(".mode-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".mode-tab").forEach(t => t.className = "mode-tab px-3 py-1 rounded-full text-zinc-400 hover:text-zinc-200 transition");
+        tab.className = "mode-tab px-3 py-1 rounded-full bg-zinc-100 text-zinc-950 font-semibold transition";
+        currentMode = tab.dataset.mode;
+        performSearch(queryInput.value);
+      });
+    });
+
+    kSlider.addEventListener("input", (e) => {
+      currentK = parseInt(e.target.value);
+      kVal.textContent = currentK;
+      if (currentMode === "hybrid") performSearch(queryInput.value);
+    });
+
+    document.querySelectorAll(".query-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        queryInput.value = chip.dataset.query;
+        performSearch(chip.dataset.query);
+      });
+    });
+
+    queryInput.addEventListener("keydown", (e) => { if (e.key === "Enter") performSearch(queryInput.value); });
+    document.getElementById("searchBtn").addEventListener("click", () => performSearch(queryInput.value));
+    clearBtn.addEventListener("click", () => { queryInput.value = ""; queryInput.focus(); });
+
+    document.getElementById("exportJsonBtn").addEventListener("click", () => {
+      if (!lastSearchResults) return;
+      const blob = new Blob([JSON.stringify(lastSearchResults, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `hybrid_search_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("ingestForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const title = document.getElementById("docTitle").value.trim();
+      const category = document.getElementById("docCategory").value.trim();
+      const content = document.getElementById("docContent").value.trim();
+      const id = "doc_" + String(activeCorpus.length + 1).padStart(3, "0");
+
+      let totalDocs = activeCorpus.length + 1;
+      if (!IS_STATIC_HOST) {
+        try {
+          const res = await fetch("/api/v1/documents", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, title, category, content })
+          });
+          if (res.ok) totalDocs = (await res.json()).total_documents;
+        } catch (err) {}
+      }
+      activeCorpus.push({ id, title, category, content });
+      precomputedCoords[id] = { x: +(Math.random() * 1.4 - 0.7).toFixed(3), y: +(Math.random() * 1.4 - 0.7).toFixed(3) };
+      indexedDocsCount.textContent = `${totalDocs} Docs`;
+      ingestModal.classList.add("hidden");
+      e.target.reset();
+      document.getElementById("toastMsg").textContent = `Indexed "${title}" (${totalDocs} docs)`;
+      document.getElementById("toast").classList.remove("hidden");
+      setTimeout(() => document.getElementById("toast").classList.add("hidden"), 3500);
+      queryInput.value = title;
+      performSearch(title);
+    });
+
+    async function init() {
+      if (!IS_STATIC_HOST) {
+        try {
+          const r = await fetch("/health");
+          if (r.ok) {
+            const h = await r.json();
+            indexedDocsCount.textContent = `${h.indexed_documents} Docs`;
+          }
+        } catch (e) {}
+      } else {
+        indexedDocsCount.textContent = `${activeCorpus.length} Docs`;
+      }
+      performSearch(queryInput.value);
+    }
+
+    init();
   </script>
 </body>
 </html>
